@@ -33,8 +33,8 @@ class ClothingItemCard extends StatelessWidget {
             AspectRatio(
               aspectRatio: 1,
               child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
                   color: AppTheme.lightGray,

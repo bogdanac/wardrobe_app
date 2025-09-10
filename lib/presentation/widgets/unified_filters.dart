@@ -106,7 +106,7 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
       
       final mostCommon = sortedColors.take(6).map((e) => e.key).toList();
       
-      final allPossibleColors = [
+      final allPossibleColors = {
         'black', 'white', 'gray', 'brown', 'beige',
         'red', 'pink', 'orange', 'yellow',
         'green', 'blue', 'navy', 'purple',
@@ -114,7 +114,7 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
         'cream', 'tan', 'maroon', 'mint',
         'lavender', 'gold', 'crimson', 'emerald',
         'turquoise', 'magenta', 'lime', 'indigo', 'rose', 'amber',
-      ].toSet().toList();
+      }.toList();
       
       final randomColors = <String>[];
       final remainingColors = allPossibleColors.where((c) => !mostCommon.contains(c)).toList();

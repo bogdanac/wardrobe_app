@@ -39,9 +39,8 @@ class UserFeedbackModel {
 
   UserFeedbackModel();
 
-  UserFeedbackModel.fromEntity(UserFeedback feedback, String userId) {
+  UserFeedbackModel.fromEntity(UserFeedback feedback, this.userId) {
     feedbackId = feedback.id;
-    this.userId = userId;
     outfitId = feedback.outfitId;
     itemId = feedback.itemId;
     type = feedback.type;

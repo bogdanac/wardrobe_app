@@ -423,7 +423,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                   });
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
       ],

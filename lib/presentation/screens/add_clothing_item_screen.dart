@@ -276,7 +276,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   });
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
       ],

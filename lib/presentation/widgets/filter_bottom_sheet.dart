@@ -152,7 +152,7 @@ class _ClothingFilterBottomSheetState extends ConsumerState<ClothingFilterBottom
                   });
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
       ],

@@ -11,13 +11,13 @@ class FeedbackButton extends StatefulWidget {
   final bool showLabel;
 
   const FeedbackButton({
-    Key? key,
+    super.key,
     this.outfitId,
     this.itemId,
     required this.context,
     this.onFeedbackGiven,
     this.showLabel = true,
-  }) : super(key: key);
+  });
 
   @override
   State<FeedbackButton> createState() => _FeedbackButtonState();
@@ -186,12 +186,12 @@ class QuickFeedbackDialog extends StatelessWidget {
   final VoidCallback? onComplete;
 
   const QuickFeedbackDialog({
-    Key? key,
+    super.key,
     this.outfitId,
     this.itemId,
     required this.context,
     this.onComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -264,13 +264,13 @@ class QuickFeedbackDialog extends StatelessWidget {
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Thanks for your feedback! 🎉'),
+              content: const Text('Thanks for your feedback! 🎉'),
               backgroundColor: color,
             ),
           );
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('Failed to record feedback'),
               backgroundColor: Colors.red,
             ),

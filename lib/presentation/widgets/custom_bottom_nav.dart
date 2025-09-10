@@ -25,7 +25,7 @@ class CustomBottomNav extends StatelessWidget {
           ),
         ],
       ),
-      child: Container(
+      child: SizedBox(
         height: 90,
         child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

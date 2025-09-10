@@ -81,7 +81,7 @@ class OutfitGeneratorService {
         weatherRanges: weatherRanges ?? [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        tags: ['generated'],
+        tags: const ['generated'],
       );
     } catch (e) {
       throw Exception('Failed to generate outfit: $e');
@@ -308,7 +308,7 @@ class OutfitGeneratorService {
         weatherRanges: weatherRanges ?? [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        tags: ['ai-generated', 'recommended'],
+        tags: const ['ai-generated', 'recommended'],
       );
 
       return outfit;
