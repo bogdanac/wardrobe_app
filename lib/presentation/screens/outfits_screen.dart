@@ -1,0 +1,271 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../../domain/entities/outfit.dart';
+import '../../core/themes/app_theme.dart';
+import '../providers/outfit_provider.dart';
+import '../providers/clothing_provider.dart';
+import '../widgets/outfit_card.dart';
+import '../widgets/unified_filters.dart';
+import 'create_outfit_screen.dart';
+
+class OutfitsScreen extends ConsumerStatefulWidget {
+  const OutfitsScreen({super.key});
+
+  @override
+  ConsumerState<OutfitsScreen> createState() => _OutfitsScreenState();
+}
+
+class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredOutfits = ref.watch(filteredOutfitsProvider);
+    final filter = ref.watch(outfitFilterProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Outfits'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.filter_list,
+              color: _hasActiveFilters(filter) ? AppTheme.pastelPink : null,
+            ),
+            onPressed: () => _showFilterBottomSheet(context),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search outfits...',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (query) {
+                ref.read(outfitFilterProvider.notifier).updateSearchQuery(query);
+              },
+            ),
+          ),
+          Expanded(
+            child: filteredOutfits.when(
+              data: (outfits) => _buildOutfitGrid(outfits),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text('Error: $error'),
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const CreateOutfitScreen(),
+          ),
+        ),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildOutfitGrid(List<Outfit> outfits) {
+    if (outfits.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.palette_outlined,
+              size: 64,
+              color: AppTheme.mediumGray,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No outfits found',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Create your first outfit!',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: MasonryGridView.count(
+        crossAxisCount: 2,
+        itemCount: outfits.length,
+        itemBuilder: (context, index) => OutfitCard(
+          outfit: outfits[index],
+          onTap: () => _onOutfitTap(outfits[index]),
+          onFavorite: () => _toggleFavorite(outfits[index]),
+          onWear: () => _markAsWornToday(outfits[index]),
+        ),
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+      ),
+    );
+  }
+
+  void _onOutfitTap(Outfit outfit) {
+    // Navigate to outfit details screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateOutfitScreen(outfit: outfit),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite(Outfit outfit) async {
+    try {
+      final repository = ref.read(outfitRepositoryProvider);
+      await repository.toggleFavorite(outfit.id);
+      ref.invalidate(allOutfitsProvider);
+      ref.invalidate(filteredOutfitsProvider);
+      ref.invalidate(favoriteOutfitsProvider);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update favorite: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _markAsWornToday(Outfit outfit) async {
+    try {
+      final repository = ref.read(outfitRepositoryProvider);
+      await repository.markAsWornToday(outfit.id);
+      
+      // Also mark all clothing items in the outfit as worn
+      final clothingRepository = ref.read(clothingRepositoryProvider);
+      for (final itemId in outfit.clothingItemIds) {
+        await clothingRepository.markAsWornToday(itemId);
+      }
+      
+      ref.invalidate(allOutfitsProvider);
+      ref.invalidate(filteredOutfitsProvider);
+      ref.invalidate(allClothingItemsProvider);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Outfit marked as worn today!'),
+          backgroundColor: AppTheme.pastelPink,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to mark as worn: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  bool _hasActiveFilters(OutfitFilterState filter) {
+    return filter.categories.isNotEmpty ||
+        filter.season != null ||
+        filter.weatherRanges.isNotEmpty ||
+        filter.isFavorite != null;
+  }
+
+  void _showFilterBottomSheet(BuildContext context) {
+    final currentFilter = ref.read(outfitFilterProvider);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Filter Outfits',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ref.read(outfitFilterProvider.notifier).clearFilters();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Clear All'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            UnifiedFilters(
+              showCategories: true,
+              showSeasons: true,
+              showWeather: true,
+              showColors: false,
+              showClothingTypes: false,
+              showFavorites: true,
+              selectedCategories: currentFilter.categories,
+              selectedSeason: currentFilter.season,
+              selectedWeatherRanges: currentFilter.weatherRanges,
+              selectedColors: const [],
+              selectedTypes: const [],
+              selectedFavorites: currentFilter.isFavorite,
+              onCategoriesChanged: (categories) {
+                ref.read(outfitFilterProvider.notifier).updateCategories(categories);
+              },
+              onSeasonChanged: (season) {
+                ref.read(outfitFilterProvider.notifier).updateSeason(season);
+              },
+              onWeatherChanged: (ranges) {
+                ref.read(outfitFilterProvider.notifier).updateWeatherRanges(ranges);
+              },
+              onColorsChanged: (colors) {},
+              onTypesChanged: (types) {},
+              onFavoritesChanged: (favorites) {
+                ref.read(outfitFilterProvider.notifier).updateFavoriteFilter(favorites);
+              },
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Apply Filters'),
+              ),
+            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
