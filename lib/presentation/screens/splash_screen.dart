@@ -161,7 +161,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 center: Alignment.center,
                 radius: 1.0,
                 colors: [
-                  AppTheme.primaryBlack.withOpacity(0.8),
+                  AppTheme.primaryBlack.withValues(alpha: 0.8),
                   AppTheme.primaryBlack,
                 ],
                 stops: [0.0, _backgroundOpacity.value],
@@ -256,7 +256,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.pastelPink.withOpacity(0.3),
+            color: AppTheme.pastelPink.withValues(alpha: 0.3),
             blurRadius: 20,
             spreadRadius: 5,
           ),
@@ -266,7 +266,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         alignment: Alignment.center,
         children: [
           // Dress silhouette
-          Icon(
+          const Icon(
             Icons.checkroom,
             size: 60,
             color: AppTheme.primaryWhite,
@@ -384,11 +384,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.7),
+              color: color.withValues(alpha: 0.7),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),

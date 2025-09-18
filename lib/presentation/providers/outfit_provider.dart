@@ -36,6 +36,7 @@ class OutfitFilterState {
   final List<WeatherRange> weatherRanges;
   final bool? isFavorite;
   final String searchQuery;
+  final bool showArchived;
 
   const OutfitFilterState({
     this.categories = const [],
@@ -43,6 +44,7 @@ class OutfitFilterState {
     this.weatherRanges = const [],
     this.isFavorite,
     this.searchQuery = '',
+    this.showArchived = false,
   });
 
   OutfitFilterState copyWith({
@@ -51,6 +53,7 @@ class OutfitFilterState {
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
     String? searchQuery,
+    bool? showArchived,
   }) {
     return OutfitFilterState(
       categories: categories ?? this.categories,
@@ -58,6 +61,7 @@ class OutfitFilterState {
       weatherRanges: weatherRanges ?? this.weatherRanges,
       isFavorite: isFavorite ?? this.isFavorite,
       searchQuery: searchQuery ?? this.searchQuery,
+      showArchived: showArchived ?? this.showArchived,
     );
   }
 }
@@ -85,6 +89,10 @@ class OutfitFilterNotifier extends StateNotifier<OutfitFilterState> {
     state = state.copyWith(searchQuery: query);
   }
 
+  void updateShowArchived(bool showArchived) {
+    state = state.copyWith(showArchived: showArchived);
+  }
+
   void clearFilters() {
     state = const OutfitFilterState();
   }
@@ -98,16 +106,34 @@ final filteredOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {
   final repository = ref.read(outfitRepositoryProvider);
   final filter = ref.watch(outfitFilterProvider);
 
+  List<Outfit> outfits;
+
   if (filter.searchQuery.isNotEmpty) {
-    return repository.searchOutfits(filter.searchQuery);
+    outfits = await repository.searchOutfits(filter.searchQuery);
+  } else {
+    outfits = await repository.filterOutfits(
+      categories: filter.categories.isEmpty ? null : filter.categories,
+      season: filter.season,
+      weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
+      isFavorite: filter.isFavorite,
+    );
   }
 
-  return repository.filterOutfits(
-    categories: filter.categories.isEmpty ? null : filter.categories,
-    season: filter.season,
-    weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
-    isFavorite: filter.isFavorite,
-  );
+  // Filter out archived outfits unless specifically requested
+  if (!filter.showArchived) {
+    outfits = outfits.where((outfit) => !outfit.isArchived).toList();
+  } else {
+    // When showing archived outfits, sort by most recently archived first
+    outfits = outfits.where((outfit) => outfit.isArchived).toList();
+    outfits.sort((a, b) {
+      if (a.dateArchived == null && b.dateArchived == null) return 0;
+      if (a.dateArchived == null) return 1;
+      if (b.dateArchived == null) return -1;
+      return b.dateArchived!.compareTo(a.dateArchived!); // Most recent first
+    });
+  }
+
+  return outfits;
 });
 
 class GeneratedOutfitsNotifier extends StateNotifier<List<Outfit>> {
@@ -129,6 +155,10 @@ class GeneratedOutfitsNotifier extends StateNotifier<List<Outfit>> {
       weatherRanges: weatherRanges,
       preferredColors: preferredColors,
     );
+    state = outfits;
+  }
+
+  void setOutfits(List<Outfit> outfits) {
     state = outfits;
   }
 

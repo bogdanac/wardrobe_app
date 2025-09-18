@@ -6,6 +6,7 @@ import '../../data/models/category_model.dart';
 import '../../data/models/color_palette_model.dart';
 import '../../data/models/user_feedback_model.dart';
 import '../../data/models/user_preferences_model.dart';
+import '../../domain/entities/social_models.dart';
 
 class DatabaseService {
   static DatabaseService? _instance;
@@ -36,6 +37,15 @@ class DatabaseService {
         ColorPaletteModelSchema,
         UserFeedbackModelSchema,
         UserPreferencesModelSchema,
+        UserProfileSchema,
+        SharedOutfitSchema,
+        OutfitLikeSchema,
+        OutfitCommentSchema,
+        UserFollowSchema,
+        StyleInspirationSchema,
+        SocialActivitySchema,
+        CommunityChallengeSchema,
+        ChallengeParticipationSchema,
       ],
       directory: dir.path,
     );

@@ -17,6 +17,7 @@ class OutfitGeneratorService {
     List<WeatherRange>? weatherRanges,
     List<String>? preferredColors,
     List<ClothingType>? excludeTypes,
+    MetallicElements? metallicElementsFilter,
   }) async {
     try {
       final allItems = await _clothingRepository.filterClothingItems(
@@ -43,6 +44,7 @@ class OutfitGeneratorService {
             availableItems,
             outfitItems,
             preferredColors,
+            metallicElementsFilter,
           );
           if (selectedItem != null) {
             outfitItems.add(selectedItem);
@@ -62,6 +64,7 @@ class OutfitGeneratorService {
               availableItems,
               outfitItems,
               preferredColors,
+              metallicElementsFilter,
             );
             if (selectedItem != null) {
               outfitItems.add(selectedItem);
@@ -120,12 +123,24 @@ class OutfitGeneratorService {
     List<ClothingItem> items,
     List<ClothingItem> existingItems,
     List<String>? preferredColors,
+    MetallicElements? metallicElementsFilter,
   ) {
     final compatibleItems = items.where((item) {
-      return _isColorCompatible(item, existingItems, preferredColors);
+      return _isColorCompatible(item, existingItems, preferredColors) &&
+             _isMetallicCompatible(item, existingItems, metallicElementsFilter);
     }).toList();
 
     if (compatibleItems.isEmpty) {
+      // If no items match both color and metallic compatibility, 
+      // prioritize metallic compatibility over color
+      final metallicCompatibleItems = items.where((item) {
+        return _isMetallicCompatible(item, existingItems, metallicElementsFilter);
+      }).toList();
+      
+      if (metallicCompatibleItems.isNotEmpty) {
+        return metallicCompatibleItems[_random.nextInt(metallicCompatibleItems.length)];
+      }
+      
       return items[_random.nextInt(items.length)];
     }
 
@@ -193,12 +208,51 @@ class OutfitGeneratorService {
     return false;
   }
 
+  bool _isMetallicCompatible(
+    ClothingItem item,
+    List<ClothingItem> existingItems,
+    MetallicElements? metallicElementsFilter,
+  ) {
+    // If no filter is set, all items are compatible
+    if (metallicElementsFilter == null) return true;
+
+    // If filter is set to "none", only accept items without metallic elements
+    if (metallicElementsFilter == MetallicElements.none) {
+      return item.metallicElements == MetallicElements.none;
+    }
+
+    // If filter is set to gold or silver, enforce the "only gold" or "only silver" rule
+    if (metallicElementsFilter == MetallicElements.gold || 
+        metallicElementsFilter == MetallicElements.silver) {
+      
+      // Check existing items - if any have metallic elements, they must match the filter
+      final existingMetallicElements = existingItems
+          .map((item) => item.metallicElements)
+          .where((element) => element != MetallicElements.none)
+          .toSet();
+
+      // If there are existing metallic items, they must all match the filter
+      if (existingMetallicElements.isNotEmpty) {
+        final hasConflictingMetals = existingMetallicElements.any((element) => 
+          element != metallicElementsFilter);
+        if (hasConflictingMetals) return false;
+      }
+
+      // The current item can either have no metallic elements or match the filter
+      return item.metallicElements == MetallicElements.none || 
+             item.metallicElements == metallicElementsFilter;
+    }
+
+    return true;
+  }
+
   Future<List<Outfit>> generateMultipleOutfits({
     required int count,
     List<String>? categories,
     Season? season,
     List<WeatherRange>? weatherRanges,
     List<String>? preferredColors,
+    MetallicElements? metallicElementsFilter,
   }) async {
     final outfits = <Outfit>[];
     final usedCombinations = <Set<String>>{};
@@ -209,6 +263,7 @@ class OutfitGeneratorService {
         season: season,
         weatherRanges: weatherRanges,
         preferredColors: preferredColors,
+        metallicElementsFilter: metallicElementsFilter,
       );
 
       if (outfit != null) {
@@ -265,6 +320,7 @@ class OutfitGeneratorService {
             final selectedItem = _selectCompatibleItem(
               availableItems,
               outfitItems,
+              null,
               null,
             );
             if (selectedItem != null) {

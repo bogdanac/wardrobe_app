@@ -165,4 +165,36 @@ class OutfitRepositoryImpl implements OutfitRepository {
       });
     }
   }
+
+  @override
+  Future<void> archiveOutfit(String id) async {
+    final isar = await _databaseService.isar;
+    final model = await isar.outfitModels.filter().idEqualTo(id).findFirst();
+    if (model != null) {
+      model.isArchived = true;
+      await isar.writeTxn(() async {
+        await isar.outfitModels.put(model);
+      });
+    }
+  }
+
+  @override
+  Future<void> unarchiveOutfit(String id) async {
+    final isar = await _databaseService.isar;
+    final model = await isar.outfitModels.filter().idEqualTo(id).findFirst();
+    if (model != null) {
+      model.isArchived = false;
+      await isar.writeTxn(() async {
+        await isar.outfitModels.put(model);
+      });
+    }
+  }
+
+  @override
+  Future<List<Outfit>> getArchivedOutfits() async {
+    final isar = await _databaseService.isar;
+    final allModels = await isar.outfitModels.where().findAll();
+    final archivedModels = allModels.where((model) => model.isArchived).toList();
+    return archivedModels.map((model) => model.toEntity()).toList();
+  }
 }

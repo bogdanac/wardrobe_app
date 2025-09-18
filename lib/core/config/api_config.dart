@@ -1,26 +1,17 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// API Configuration for external services
 /// 
 /// This class is the SINGLE source of truth for all API keys and endpoints.
-/// For production, these should be loaded from environment variables or secure storage.
+/// API keys are loaded from .env file for security.
 class ApiConfig {
   // Private constructor to prevent instantiation
   ApiConfig._();
   
-  /// SINGLE PLACE for all API configuration
-  static const _config = {
-    'REMOVE_BG_API_KEY': String.fromEnvironment('REMOVE_BG_API_KEY', defaultValue: ''),
-    'REMOVE_BG_ENDPOINT': 'https://api.remove.bg/v1.0/removebg',
-  };
-  
-  // Add other API configurations here as needed
-  // 'OPENAI_API_KEY': String.fromEnvironment('OPENAI_API_KEY', defaultValue: ''),
-  // 'GOOGLE_VISION_API_KEY': String.fromEnvironment('GOOGLE_VISION_API_KEY', defaultValue: ''),
-  
-  /// Get Remove.bg API key
-  static String get removeBgApiKey => _config['REMOVE_BG_API_KEY']!;
-  
-  /// Get Remove.bg endpoint
-  static String get removeBgEndpoint => _config['REMOVE_BG_ENDPOINT']!;
+  /// Remove.bg endpoint
+  static const String removeBgEndpoint = 'https://api.remove.bg/v1.0/removebg';
+  /// Get Remove.bg API key from .env file
+  static String get removeBgApiKey => dotenv.env['REMOVE_BG_API_KEY'] ?? '';
   
   /// Check if Remove.bg API is properly configured
   static bool get isRemoveBgConfigured => removeBgApiKey.isNotEmpty;
@@ -28,7 +19,7 @@ class ApiConfig {
   /// Get Remove.bg API key with validation
   static String getRemoveBgApiKey() {
     if (!isRemoveBgConfigured) {
-      throw Exception('Remove.bg API key not configured. Please set REMOVE_BG_API_KEY environment variable.');
+      throw Exception('Remove.bg API key not configured. Please add REMOVE_BG_API_KEY to your .env file.');
     }
     return removeBgApiKey;
   }

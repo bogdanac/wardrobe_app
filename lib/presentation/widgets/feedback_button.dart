@@ -197,9 +197,10 @@ class QuickFeedbackDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('How do you like this?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Text(
             'Your feedback helps us learn your style and make better recommendations.',
             style: TextStyle(
@@ -231,7 +232,8 @@ class QuickFeedbackDialog extends StatelessWidget {
               ),
             ],
           ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(

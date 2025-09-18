@@ -38,11 +38,27 @@ enum WeatherRange {
   veryCold // -15°C+
 }
 
+enum MetallicElements {
+  none,
+  gold,
+  silver
+}
+
+enum SizeFit {
+  perfect,
+  tooSmall,
+  tooLarge,
+  cropped,
+  oversized
+}
+
 class ClothingItem extends Equatable {
   final String id;
   final String name;
+  final String? brand;
   final ClothingType type;
-  final String? imagePath;
+  final String? imagePath; // Main image with background removal
+  final List<String> additionalImages; // Additional images without processing
   final List<String> colors;
   final List<String> categories;
   final Season? season;
@@ -53,12 +69,17 @@ class ClothingItem extends Equatable {
   final DateTime updatedAt;
   final String? notes;
   final List<String> tags;
+  final MetallicElements metallicElements;
+  final SizeFit sizeFit;
+  final bool isArchived;
 
   const ClothingItem({
     required this.id,
     required this.name,
+    this.brand,
     required this.type,
     this.imagePath,
+    this.additionalImages = const [],
     this.colors = const [],
     this.categories = const [],
     this.season,
@@ -69,13 +90,18 @@ class ClothingItem extends Equatable {
     required this.updatedAt,
     this.notes,
     this.tags = const [],
+    this.metallicElements = MetallicElements.none,
+    this.sizeFit = SizeFit.perfect,
+    this.isArchived = false,
   });
 
   ClothingItem copyWith({
     String? id,
     String? name,
+    String? brand,
     ClothingType? type,
     String? imagePath,
+    List<String>? additionalImages,
     List<String>? colors,
     List<String>? categories,
     Season? season,
@@ -86,12 +112,17 @@ class ClothingItem extends Equatable {
     DateTime? updatedAt,
     String? notes,
     List<String>? tags,
+    MetallicElements? metallicElements,
+    SizeFit? sizeFit,
+    bool? isArchived,
   }) {
     return ClothingItem(
       id: id ?? this.id,
       name: name ?? this.name,
+      brand: brand ?? this.brand,
       type: type ?? this.type,
       imagePath: imagePath ?? this.imagePath,
+      additionalImages: additionalImages ?? this.additionalImages,
       colors: colors ?? this.colors,
       categories: categories ?? this.categories,
       season: season ?? this.season,
@@ -102,6 +133,9 @@ class ClothingItem extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       notes: notes ?? this.notes,
       tags: tags ?? this.tags,
+      metallicElements: metallicElements ?? this.metallicElements,
+      sizeFit: sizeFit ?? this.sizeFit,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 
@@ -109,8 +143,10 @@ class ClothingItem extends Equatable {
   List<Object?> get props => [
         id,
         name,
+        brand,
         type,
         imagePath,
+        additionalImages,
         colors,
         categories,
         season,
@@ -121,5 +157,8 @@ class ClothingItem extends Equatable {
         updatedAt,
         notes,
         tags,
+        metallicElements,
+        sizeFit,
+        isArchived,
       ];
 }

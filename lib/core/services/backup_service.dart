@@ -76,8 +76,10 @@ class BackupService {
       final clothingItemsJson = clothingItems.map((item) => {
         'id': item.id,
         'name': item.name,
+        'brand': item.brand,
         'type': item.type.name,
         'imagePath': item.imagePath,
+        'additionalImages': item.additionalImages,
         'colors': item.colors,
         'categories': item.categories,
         'season': item.season?.name,
@@ -88,6 +90,9 @@ class BackupService {
         'updatedAt': item.updatedAt.toIso8601String(),
         'notes': item.notes,
         'tags': item.tags,
+        'metallicElements': item.metallicElements.name,
+        'sizeFit': item.sizeFit.name,
+        'isArchived': item.isArchived,
       }).toList();
 
       final outfitsJson = outfits.map((outfit) => {
@@ -104,6 +109,8 @@ class BackupService {
         'notes': outfit.notes,
         'tags': outfit.tags,
         'isFavorite': outfit.isFavorite,
+        'isArchived': outfit.isArchived,
+        'dateArchived': outfit.dateArchived?.toIso8601String(),
         'imagePreviewPath': outfit.imagePreviewPath,
       }).toList();
 
@@ -219,9 +226,11 @@ class BackupService {
           try {
             final item = ClothingItemModel(
               id: itemJson['id'],
-              name: itemJson['name'],
+              name: itemJson['name'] ?? 'Unnamed Item',
+              brand: itemJson['brand'],
               type: _parseClothingType(itemJson['type']),
               imagePath: itemJson['imagePath'],
+              additionalImages: List<String>.from(itemJson['additionalImages'] ?? []),
               colors: List<String>.from(itemJson['colors'] ?? []),
               categories: List<String>.from(itemJson['categories'] ?? []),
               season: itemJson['season'] != null ? _parseSeason(itemJson['season']) : null,
@@ -236,6 +245,13 @@ class BackupService {
               updatedAt: DateTime.parse(itemJson['updatedAt']),
               notes: itemJson['notes'],
               tags: List<String>.from(itemJson['tags'] ?? []),
+              metallicElements: itemJson['metallicElements'] != null
+                  ? _parseMetallicElements(itemJson['metallicElements'])
+                  : MetallicElements.none,
+              sizeFit: itemJson['sizeFit'] != null
+                  ? _parseSizeFit(itemJson['sizeFit'])
+                  : SizeFit.perfect,
+              isArchived: itemJson['isArchived'] ?? false,
             );
             await isar.clothingItemModels.put(item);
           } catch (e) {
@@ -265,6 +281,10 @@ class BackupService {
               notes: outfitJson['notes'],
               tags: List<String>.from(outfitJson['tags'] ?? []),
               isFavorite: outfitJson['isFavorite'] ?? false,
+              isArchived: outfitJson['isArchived'] ?? false,
+              dateArchived: outfitJson['dateArchived'] != null
+                  ? DateTime.parse(outfitJson['dateArchived'])
+                  : null,
               imagePreviewPath: outfitJson['imagePreviewPath'],
             );
             await isar.outfitModels.put(outfit);
@@ -338,6 +358,20 @@ class BackupService {
     return WeatherRange.values.firstWhere(
       (range) => range.name == rangeName,
       orElse: () => WeatherRange.warm,
+    );
+  }
+
+  MetallicElements _parseMetallicElements(String elementsName) {
+    return MetallicElements.values.firstWhere(
+      (element) => element.name == elementsName,
+      orElse: () => MetallicElements.none,
+    );
+  }
+
+  SizeFit _parseSizeFit(String sizeFitName) {
+    return SizeFit.values.firstWhere(
+      (fit) => fit.name == sizeFitName,
+      orElse: () => SizeFit.perfect,
     );
   }
 }

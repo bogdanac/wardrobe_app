@@ -28,6 +28,8 @@ class OutfitModel {
   String? notes;
   List<String> tags;
   bool isFavorite;
+  bool isArchived;
+  DateTime? dateArchived;
   String? imagePreviewPath;
 
   OutfitModel({
@@ -45,6 +47,8 @@ class OutfitModel {
     this.notes,
     this.tags = const [],
     this.isFavorite = false,
+    this.isArchived = false,
+    this.dateArchived,
     this.imagePreviewPath,
   });
 
@@ -63,6 +67,8 @@ class OutfitModel {
       notes: notes,
       tags: tags,
       isFavorite: isFavorite,
+      isArchived: isArchived,
+      dateArchived: dateArchived,
       imagePreviewPath: imagePreviewPath,
     );
   }
@@ -82,6 +88,8 @@ class OutfitModel {
       notes: entity.notes,
       tags: entity.tags,
       isFavorite: entity.isFavorite,
+      isArchived: entity.isArchived,
+      dateArchived: entity.dateArchived,
       imagePreviewPath: entity.imagePreviewPath,
     );
   }

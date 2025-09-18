@@ -17,75 +17,102 @@ const ClothingItemModelSchema = CollectionSchema(
   name: r'ClothingItemModel',
   id: 8152848221348614237,
   properties: {
-    r'categories': PropertySchema(
+    r'additionalImages': PropertySchema(
       id: 0,
+      name: r'additionalImages',
+      type: IsarType.stringList,
+    ),
+    r'brand': PropertySchema(
+      id: 1,
+      name: r'brand',
+      type: IsarType.string,
+    ),
+    r'categories': PropertySchema(
+      id: 2,
       name: r'categories',
       type: IsarType.stringList,
     ),
     r'colors': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'colors',
       type: IsarType.stringList,
     ),
     r'createdAt': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'id': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'id',
       type: IsarType.string,
     ),
     r'imagePath': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'imagePath',
       type: IsarType.string,
     ),
+    r'isArchived': PropertySchema(
+      id: 7,
+      name: r'isArchived',
+      type: IsarType.bool,
+    ),
     r'lastWornDate': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'lastWornDate',
       type: IsarType.dateTime,
     ),
+    r'metallicElements': PropertySchema(
+      id: 9,
+      name: r'metallicElements',
+      type: IsarType.string,
+      enumMap: _ClothingItemModelmetallicElementsEnumValueMap,
+    ),
     r'name': PropertySchema(
-      id: 6,
+      id: 10,
       name: r'name',
       type: IsarType.string,
     ),
     r'notes': PropertySchema(
-      id: 7,
+      id: 11,
       name: r'notes',
       type: IsarType.string,
     ),
     r'season': PropertySchema(
-      id: 8,
+      id: 12,
       name: r'season',
       type: IsarType.string,
       enumMap: _ClothingItemModelseasonEnumValueMap,
     ),
+    r'sizeFit': PropertySchema(
+      id: 13,
+      name: r'sizeFit',
+      type: IsarType.string,
+      enumMap: _ClothingItemModelsizeFitEnumValueMap,
+    ),
     r'tags': PropertySchema(
-      id: 9,
+      id: 14,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'type': PropertySchema(
-      id: 10,
+      id: 15,
       name: r'type',
       type: IsarType.string,
       enumMap: _ClothingItemModeltypeEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 11,
+      id: 16,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'wearCount': PropertySchema(
-      id: 12,
+      id: 17,
       name: r'wearCount',
       type: IsarType.long,
     ),
     r'weatherRanges': PropertySchema(
-      id: 13,
+      id: 18,
       name: r'weatherRanges',
       type: IsarType.stringList,
       enumMap: _ClothingItemModelweatherRangesEnumValueMap,
@@ -125,6 +152,19 @@ int _clothingItemModelEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.additionalImages.length * 3;
+  {
+    for (var i = 0; i < object.additionalImages.length; i++) {
+      final value = object.additionalImages[i];
+      bytesCount += value.length * 3;
+    }
+  }
+  {
+    final value = object.brand;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.categories.length * 3;
   {
     for (var i = 0; i < object.categories.length; i++) {
@@ -146,6 +186,7 @@ int _clothingItemModelEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.metallicElements.name.length * 3;
   bytesCount += 3 + object.name.length * 3;
   {
     final value = object.notes;
@@ -159,6 +200,7 @@ int _clothingItemModelEstimateSize(
       bytesCount += 3 + value.name.length * 3;
     }
   }
+  bytesCount += 3 + object.sizeFit.name.length * 3;
   bytesCount += 3 + object.tags.length * 3;
   {
     for (var i = 0; i < object.tags.length; i++) {
@@ -183,21 +225,26 @@ void _clothingItemModelSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeStringList(offsets[0], object.categories);
-  writer.writeStringList(offsets[1], object.colors);
-  writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeString(offsets[3], object.id);
-  writer.writeString(offsets[4], object.imagePath);
-  writer.writeDateTime(offsets[5], object.lastWornDate);
-  writer.writeString(offsets[6], object.name);
-  writer.writeString(offsets[7], object.notes);
-  writer.writeString(offsets[8], object.season?.name);
-  writer.writeStringList(offsets[9], object.tags);
-  writer.writeString(offsets[10], object.type.name);
-  writer.writeDateTime(offsets[11], object.updatedAt);
-  writer.writeLong(offsets[12], object.wearCount);
+  writer.writeStringList(offsets[0], object.additionalImages);
+  writer.writeString(offsets[1], object.brand);
+  writer.writeStringList(offsets[2], object.categories);
+  writer.writeStringList(offsets[3], object.colors);
+  writer.writeDateTime(offsets[4], object.createdAt);
+  writer.writeString(offsets[5], object.id);
+  writer.writeString(offsets[6], object.imagePath);
+  writer.writeBool(offsets[7], object.isArchived);
+  writer.writeDateTime(offsets[8], object.lastWornDate);
+  writer.writeString(offsets[9], object.metallicElements.name);
+  writer.writeString(offsets[10], object.name);
+  writer.writeString(offsets[11], object.notes);
+  writer.writeString(offsets[12], object.season?.name);
+  writer.writeString(offsets[13], object.sizeFit.name);
+  writer.writeStringList(offsets[14], object.tags);
+  writer.writeString(offsets[15], object.type.name);
+  writer.writeDateTime(offsets[16], object.updatedAt);
+  writer.writeLong(offsets[17], object.wearCount);
   writer.writeStringList(
-      offsets[13], object.weatherRanges.map((e) => e.name).toList());
+      offsets[18], object.weatherRanges.map((e) => e.name).toList());
 }
 
 ClothingItemModel _clothingItemModelDeserialize(
@@ -207,25 +254,34 @@ ClothingItemModel _clothingItemModelDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = ClothingItemModel(
-    categories: reader.readStringList(offsets[0]) ?? const [],
-    colors: reader.readStringList(offsets[1]) ?? const [],
-    createdAt: reader.readDateTime(offsets[2]),
-    id: reader.readString(offsets[3]),
-    imagePath: reader.readStringOrNull(offsets[4]),
+    additionalImages: reader.readStringList(offsets[0]) ?? const [],
+    brand: reader.readStringOrNull(offsets[1]),
+    categories: reader.readStringList(offsets[2]) ?? const [],
+    colors: reader.readStringList(offsets[3]) ?? const [],
+    createdAt: reader.readDateTime(offsets[4]),
+    id: reader.readString(offsets[5]),
+    imagePath: reader.readStringOrNull(offsets[6]),
+    isArchived: reader.readBoolOrNull(offsets[7]) ?? false,
     isarId: id,
-    lastWornDate: reader.readDateTimeOrNull(offsets[5]),
-    name: reader.readString(offsets[6]),
-    notes: reader.readStringOrNull(offsets[7]),
+    lastWornDate: reader.readDateTimeOrNull(offsets[8]),
+    metallicElements: _ClothingItemModelmetallicElementsValueEnumMap[
+            reader.readStringOrNull(offsets[9])] ??
+        MetallicElements.none,
+    name: reader.readString(offsets[10]),
+    notes: reader.readStringOrNull(offsets[11]),
     season: _ClothingItemModelseasonValueEnumMap[
-        reader.readStringOrNull(offsets[8])],
-    tags: reader.readStringList(offsets[9]) ?? const [],
+        reader.readStringOrNull(offsets[12])],
+    sizeFit: _ClothingItemModelsizeFitValueEnumMap[
+            reader.readStringOrNull(offsets[13])] ??
+        SizeFit.perfect,
+    tags: reader.readStringList(offsets[14]) ?? const [],
     type: _ClothingItemModeltypeValueEnumMap[
-            reader.readStringOrNull(offsets[10])] ??
+            reader.readStringOrNull(offsets[15])] ??
         ClothingType.top,
-    updatedAt: reader.readDateTime(offsets[11]),
-    wearCount: reader.readLongOrNull(offsets[12]) ?? 0,
+    updatedAt: reader.readDateTime(offsets[16]),
+    wearCount: reader.readLongOrNull(offsets[17]) ?? 0,
     weatherRanges: reader
-            .readStringList(offsets[13])
+            .readStringList(offsets[18])
             ?.map((e) =>
                 _ClothingItemModelweatherRangesValueEnumMap[e] ??
                 WeatherRange.veryHot)
@@ -245,33 +301,47 @@ P _clothingItemModelDeserializeProp<P>(
     case 0:
       return (reader.readStringList(offset) ?? const []) as P;
     case 1:
-      return (reader.readStringList(offset) ?? const []) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringList(offset) ?? const []) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? const []) as P;
     case 4:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
-    case 7:
+    case 6:
       return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 9:
+      return (_ClothingItemModelmetallicElementsValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          MetallicElements.none) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
       return (_ClothingItemModelseasonValueEnumMap[
           reader.readStringOrNull(offset)]) as P;
-    case 9:
+    case 13:
+      return (_ClothingItemModelsizeFitValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          SizeFit.perfect) as P;
+    case 14:
       return (reader.readStringList(offset) ?? const []) as P;
-    case 10:
+    case 15:
       return (_ClothingItemModeltypeValueEnumMap[
               reader.readStringOrNull(offset)] ??
           ClothingType.top) as P;
-    case 11:
+    case 16:
       return (reader.readDateTime(offset)) as P;
-    case 12:
+    case 17:
       return (reader.readLongOrNull(offset) ?? 0) as P;
-    case 13:
+    case 18:
       return (reader
               .readStringList(offset)
               ?.map((e) =>
@@ -284,6 +354,16 @@ P _clothingItemModelDeserializeProp<P>(
   }
 }
 
+const _ClothingItemModelmetallicElementsEnumValueMap = {
+  r'none': r'none',
+  r'gold': r'gold',
+  r'silver': r'silver',
+};
+const _ClothingItemModelmetallicElementsValueEnumMap = {
+  r'none': MetallicElements.none,
+  r'gold': MetallicElements.gold,
+  r'silver': MetallicElements.silver,
+};
 const _ClothingItemModelseasonEnumValueMap = {
   r'spring': r'spring',
   r'summer': r'summer',
@@ -297,6 +377,20 @@ const _ClothingItemModelseasonValueEnumMap = {
   r'autumn': Season.autumn,
   r'winter': Season.winter,
   r'allSeason': Season.allSeason,
+};
+const _ClothingItemModelsizeFitEnumValueMap = {
+  r'perfect': r'perfect',
+  r'tooSmall': r'tooSmall',
+  r'tooLarge': r'tooLarge',
+  r'cropped': r'cropped',
+  r'oversized': r'oversized',
+};
+const _ClothingItemModelsizeFitValueEnumMap = {
+  r'perfect': SizeFit.perfect,
+  r'tooSmall': SizeFit.tooSmall,
+  r'tooLarge': SizeFit.tooLarge,
+  r'cropped': SizeFit.cropped,
+  r'oversized': SizeFit.oversized,
 };
 const _ClothingItemModeltypeEnumValueMap = {
   r'top': r'top',
@@ -551,6 +645,387 @@ extension ClothingItemModelQueryWhere
 
 extension ClothingItemModelQueryFilter
     on QueryBuilder<ClothingItemModel, ClothingItemModel, QFilterCondition> {
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'additionalImages',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'additionalImages',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'additionalImages',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'additionalImages',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'additionalImages',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      additionalImagesLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'additionalImages',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'brand',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'brand',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'brand',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'brand',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'brand',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'brand',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      brandIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'brand',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
       categoriesElementEqualTo(
     String value, {
@@ -1348,6 +1823,16 @@ extension ClothingItemModelQueryFilter
   }
 
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      isArchivedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
       isarIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1491,6 +1976,142 @@ extension ClothingItemModelQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsEqualTo(
+    MetallicElements value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsGreaterThan(
+    MetallicElements value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsLessThan(
+    MetallicElements value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsBetween(
+    MetallicElements lower,
+    MetallicElements upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'metallicElements',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'metallicElements',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'metallicElements',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'metallicElements',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      metallicElementsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'metallicElements',
+        value: '',
       ));
     });
   }
@@ -1934,6 +2555,142 @@ extension ClothingItemModelQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'season',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitEqualTo(
+    SizeFit value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitGreaterThan(
+    SizeFit value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitLessThan(
+    SizeFit value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitBetween(
+    SizeFit lower,
+    SizeFit upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'sizeFit',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'sizeFit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'sizeFit',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sizeFit',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterFilterCondition>
+      sizeFitIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'sizeFit',
         value: '',
       ));
     });
@@ -2647,6 +3404,20 @@ extension ClothingItemModelQueryLinks
 extension ClothingItemModelQuerySortBy
     on QueryBuilder<ClothingItemModel, ClothingItemModel, QSortBy> {
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByBrand() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'brand', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByBrandDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'brand', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
       sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
@@ -2688,6 +3459,20 @@ extension ClothingItemModelQuerySortBy
   }
 
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
       sortByLastWornDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastWornDate', Sort.asc);
@@ -2698,6 +3483,20 @@ extension ClothingItemModelQuerySortBy
       sortByLastWornDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastWornDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByMetallicElements() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'metallicElements', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortByMetallicElementsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'metallicElements', Sort.desc);
     });
   }
 
@@ -2740,6 +3539,20 @@ extension ClothingItemModelQuerySortBy
       sortBySeasonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'season', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortBySizeFit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sizeFit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      sortBySizeFitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sizeFit', Sort.desc);
     });
   }
 
@@ -2789,6 +3602,20 @@ extension ClothingItemModelQuerySortBy
 extension ClothingItemModelQuerySortThenBy
     on QueryBuilder<ClothingItemModel, ClothingItemModel, QSortThenBy> {
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByBrand() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'brand', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByBrandDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'brand', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
       thenByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
@@ -2830,6 +3657,20 @@ extension ClothingItemModelQuerySortThenBy
   }
 
   QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
       thenByIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.asc);
@@ -2854,6 +3695,20 @@ extension ClothingItemModelQuerySortThenBy
       thenByLastWornDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastWornDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByMetallicElements() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'metallicElements', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenByMetallicElementsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'metallicElements', Sort.desc);
     });
   }
 
@@ -2896,6 +3751,20 @@ extension ClothingItemModelQuerySortThenBy
       thenBySeasonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'season', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenBySizeFit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sizeFit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QAfterSortBy>
+      thenBySizeFitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sizeFit', Sort.desc);
     });
   }
 
@@ -2945,6 +3814,20 @@ extension ClothingItemModelQuerySortThenBy
 extension ClothingItemModelQueryWhereDistinct
     on QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct> {
   QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
+      distinctByAdditionalImages() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'additionalImages');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct> distinctByBrand(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'brand', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
       distinctByCategories() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'categories');
@@ -2980,9 +3863,24 @@ extension ClothingItemModelQueryWhereDistinct
   }
 
   QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
+      distinctByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isArchived');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
       distinctByLastWornDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'lastWornDate');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
+      distinctByMetallicElements({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'metallicElements',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -3004,6 +3902,13 @@ extension ClothingItemModelQueryWhereDistinct
       distinctBySeason({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'season', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, ClothingItemModel, QDistinct>
+      distinctBySizeFit({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sizeFit', caseSensitive: caseSensitive);
     });
   }
 
@@ -3052,6 +3957,19 @@ extension ClothingItemModelQueryProperty
   }
 
   QueryBuilder<ClothingItemModel, List<String>, QQueryOperations>
+      additionalImagesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'additionalImages');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, String?, QQueryOperations> brandProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'brand');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, List<String>, QQueryOperations>
       categoriesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'categories');
@@ -3085,10 +4003,23 @@ extension ClothingItemModelQueryProperty
     });
   }
 
+  QueryBuilder<ClothingItemModel, bool, QQueryOperations> isArchivedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isArchived');
+    });
+  }
+
   QueryBuilder<ClothingItemModel, DateTime?, QQueryOperations>
       lastWornDateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastWornDate');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, MetallicElements, QQueryOperations>
+      metallicElementsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'metallicElements');
     });
   }
 
@@ -3107,6 +4038,12 @@ extension ClothingItemModelQueryProperty
   QueryBuilder<ClothingItemModel, Season?, QQueryOperations> seasonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'season');
+    });
+  }
+
+  QueryBuilder<ClothingItemModel, SizeFit, QQueryOperations> sizeFitProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sizeFit');
     });
   }
 

@@ -16,6 +16,8 @@ class Outfit extends Equatable {
   final List<String> tags;
   final bool isFavorite;
   final String? imagePreviewPath;
+  final bool isArchived;
+  final DateTime? dateArchived;
 
   const Outfit({
     required this.id,
@@ -32,6 +34,8 @@ class Outfit extends Equatable {
     this.tags = const [],
     this.isFavorite = false,
     this.imagePreviewPath,
+    this.isArchived = false,
+    this.dateArchived,
   });
 
   Outfit copyWith({
@@ -49,6 +53,8 @@ class Outfit extends Equatable {
     List<String>? tags,
     bool? isFavorite,
     String? imagePreviewPath,
+    bool? isArchived,
+    DateTime? dateArchived,
   }) {
     return Outfit(
       id: id ?? this.id,
@@ -65,6 +71,8 @@ class Outfit extends Equatable {
       tags: tags ?? this.tags,
       isFavorite: isFavorite ?? this.isFavorite,
       imagePreviewPath: imagePreviewPath ?? this.imagePreviewPath,
+      isArchived: isArchived ?? this.isArchived,
+      dateArchived: dateArchived ?? this.dateArchived,
     );
   }
 
@@ -84,5 +92,7 @@ class Outfit extends Equatable {
         tags,
         isFavorite,
         imagePreviewPath,
+        isArchived,
+        dateArchived,
       ];
 }

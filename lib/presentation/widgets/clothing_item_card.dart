@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
+import 'adaptive_clothing_image.dart';
 
 class ClothingItemCard extends StatelessWidget {
   final ClothingItem item;
@@ -30,32 +30,16 @@ class ClothingItemCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Container(
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  color: AppTheme.lightGray,
-                ),
-                child: item.imagePath != null
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: Image.file(
-                          File(item.imagePath!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPlaceholder(),
-                        ),
-                      )
-                    : _buildPlaceholder(),
+            AdaptiveClothingImage(
+              imagePath: item.imagePath,
+              type: item.type,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
               ),
+              placeholder: _buildPlaceholder(),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -64,43 +48,67 @@ class ClothingItemCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
+                      color: AppTheme.primaryBlack,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     _getTypeLabel(item.type),
                     style: const TextStyle(
-                      color: AppTheme.mediumGray,
+                      fontWeight: FontWeight.w400,
                       fontSize: 12,
+                      color: AppTheme.mediumGray,
                     ),
                   ),
+                  if (item.brand != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.brand!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 10,
+                        color: AppTheme.mediumGray,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   if (item.colors.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _buildColorDots(),
                   ],
                   if (item.categories.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     _buildCategories(),
                   ],
-                  const SizedBox(height: 8),
+                  if (item.metallicElements != MetallicElements.none) ...[
+                    const SizedBox(height: 4),
+                    _buildMetallicElements(),
+                  ],
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Worn ${item.wearCount}x',
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
                           color: AppTheme.mediumGray,
                         ),
                       ),
                       if (item.lastWornDate != null)
-                        Text(
-                          _getLastWornText(item.lastWornDate!),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.mediumGray,
+                        Flexible(
+                          child: Text(
+                            _getLastWornText(item.lastWornDate!),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: AppTheme.mediumGray,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                     ],
@@ -158,9 +166,47 @@ class ClothingItemCard extends StatelessWidget {
               fontSize: 10,
               color: AppTheme.primaryBlack,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildMetallicElements() {
+    final color = _getMetallicElementsColor(item.metallicElements);
+    final label = _getMetallicElementsLabel(item.metallicElements);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppTheme.primaryBlack,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -268,6 +314,28 @@ class ClothingItemCard extends StatelessWidget {
       return '${difference.inDays ~/ 7} weeks ago';
     } else {
       return '${difference.inDays ~/ 30} months ago';
+    }
+  }
+
+  String _getMetallicElementsLabel(MetallicElements elements) {
+    switch (elements) {
+      case MetallicElements.none:
+        return 'None';
+      case MetallicElements.gold:
+        return 'Gold';
+      case MetallicElements.silver:
+        return 'Silver';
+    }
+  }
+
+  Color _getMetallicElementsColor(MetallicElements elements) {
+    switch (elements) {
+      case MetallicElements.none:
+        return Colors.grey;
+      case MetallicElements.gold:
+        return const Color(0xFFFFD700);
+      case MetallicElements.silver:
+        return const Color(0xFFC0C0C0);
     }
   }
 }

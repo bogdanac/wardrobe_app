@@ -12,18 +12,21 @@ class UnifiedFilters extends ConsumerStatefulWidget {
   final bool showColors;
   final bool showClothingTypes;
   final bool showFavorites;
+  final bool showMetallicElements;
   final List<String> selectedCategories;
   final Season? selectedSeason;
   final List<WeatherRange> selectedWeatherRanges;
   final List<String> selectedColors;
   final List<ClothingType> selectedTypes;
   final bool? selectedFavorites;
+  final MetallicElements? selectedMetallicElements;
   final Function(List<String>) onCategoriesChanged;
   final Function(Season?) onSeasonChanged;
   final Function(List<WeatherRange>) onWeatherChanged;
   final Function(List<String>) onColorsChanged;
   final Function(List<ClothingType>) onTypesChanged;
   final Function(bool?) onFavoritesChanged;
+  final Function(MetallicElements?) onMetallicElementsChanged;
 
   const UnifiedFilters({
     super.key,
@@ -33,18 +36,21 @@ class UnifiedFilters extends ConsumerStatefulWidget {
     this.showColors = false,
     this.showClothingTypes = false,
     this.showFavorites = false,
+    this.showMetallicElements = false,
     required this.selectedCategories,
     this.selectedSeason,
     required this.selectedWeatherRanges,
     this.selectedColors = const [],
     this.selectedTypes = const [],
     this.selectedFavorites,
+    this.selectedMetallicElements,
     required this.onCategoriesChanged,
     required this.onSeasonChanged,
     required this.onWeatherChanged,
     required this.onColorsChanged,
     required this.onTypesChanged,
     required this.onFavoritesChanged,
+    required this.onMetallicElementsChanged,
   });
 
   @override
@@ -200,6 +206,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
         ],
         if (widget.showFavorites) ...[
           _buildFavoriteFilter(),
+          const SizedBox(height: 16),
+        ],
+        if (widget.showMetallicElements) ...[
+          _buildMetallicElementsFilter(),
           const SizedBox(height: 16),
         ],
       ],
@@ -441,6 +451,47 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
     );
   }
 
+  Widget _buildMetallicElementsFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Metallic Elements',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 4,
+          runSpacing: 0,
+          children: [
+            ChoiceChip(
+              label: const Text('All'),
+              selected: widget.selectedMetallicElements == null,
+              onSelected: (selected) {
+                widget.onMetallicElementsChanged(null);
+              },
+            ),
+            ...MetallicElements.values.map((element) {
+              final isSelected = widget.selectedMetallicElements == element;
+              return ChoiceChip(
+                label: Text(_getMetallicElementsLabel(element)),
+                selected: isSelected,
+                selectedColor: _getMetallicElementsColor(element),
+                backgroundColor: _getMetallicElementsColor(element).withValues(alpha: 0.2),
+                onSelected: (selected) {
+                  widget.onMetallicElementsChanged(selected ? element : null);
+                },
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
   Color _getColorFromName(String colorName) {
     switch (colorName.toLowerCase()) {
       case 'black': return Colors.black;
@@ -539,6 +590,28 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
       case WeatherRange.cool: return const Color(0xFF42A5F5);
       case WeatherRange.cold: return const Color(0xFF5C6BC0);
       case WeatherRange.veryCold: return const Color(0xFF78909C);
+    }
+  }
+
+  String _getMetallicElementsLabel(MetallicElements elements) {
+    switch (elements) {
+      case MetallicElements.none:
+        return 'None';
+      case MetallicElements.gold:
+        return 'Gold';
+      case MetallicElements.silver:
+        return 'Silver';
+    }
+  }
+
+  Color _getMetallicElementsColor(MetallicElements elements) {
+    switch (elements) {
+      case MetallicElements.none:
+        return Colors.grey;
+      case MetallicElements.gold:
+        return const Color(0xFFFFD700);
+      case MetallicElements.silver:
+        return const Color(0xFFC0C0C0);
     }
   }
 }

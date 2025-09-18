@@ -32,59 +32,69 @@ const OutfitModelSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'id': PropertySchema(
+    r'dateArchived': PropertySchema(
       id: 3,
+      name: r'dateArchived',
+      type: IsarType.dateTime,
+    ),
+    r'id': PropertySchema(
+      id: 4,
       name: r'id',
       type: IsarType.string,
     ),
     r'imagePreviewPath': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'imagePreviewPath',
       type: IsarType.string,
     ),
+    r'isArchived': PropertySchema(
+      id: 6,
+      name: r'isArchived',
+      type: IsarType.bool,
+    ),
     r'isFavorite': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
     r'lastWornDate': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'lastWornDate',
       type: IsarType.dateTime,
     ),
     r'name': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'name',
       type: IsarType.string,
     ),
     r'notes': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'notes',
       type: IsarType.string,
     ),
     r'season': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'season',
       type: IsarType.string,
       enumMap: _OutfitModelseasonEnumValueMap,
     ),
     r'tags': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'updatedAt': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'wearCount': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'wearCount',
       type: IsarType.long,
     ),
     r'weatherRanges': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'weatherRanges',
       type: IsarType.stringList,
       enumMap: _OutfitModelweatherRangesEnumValueMap,
@@ -184,18 +194,20 @@ void _outfitModelSerialize(
   writer.writeStringList(offsets[0], object.categories);
   writer.writeStringList(offsets[1], object.clothingItemIds);
   writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeString(offsets[3], object.id);
-  writer.writeString(offsets[4], object.imagePreviewPath);
-  writer.writeBool(offsets[5], object.isFavorite);
-  writer.writeDateTime(offsets[6], object.lastWornDate);
-  writer.writeString(offsets[7], object.name);
-  writer.writeString(offsets[8], object.notes);
-  writer.writeString(offsets[9], object.season?.name);
-  writer.writeStringList(offsets[10], object.tags);
-  writer.writeDateTime(offsets[11], object.updatedAt);
-  writer.writeLong(offsets[12], object.wearCount);
+  writer.writeDateTime(offsets[3], object.dateArchived);
+  writer.writeString(offsets[4], object.id);
+  writer.writeString(offsets[5], object.imagePreviewPath);
+  writer.writeBool(offsets[6], object.isArchived);
+  writer.writeBool(offsets[7], object.isFavorite);
+  writer.writeDateTime(offsets[8], object.lastWornDate);
+  writer.writeString(offsets[9], object.name);
+  writer.writeString(offsets[10], object.notes);
+  writer.writeString(offsets[11], object.season?.name);
+  writer.writeStringList(offsets[12], object.tags);
+  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeLong(offsets[14], object.wearCount);
   writer.writeStringList(
-      offsets[13], object.weatherRanges.map((e) => e.name).toList());
+      offsets[15], object.weatherRanges.map((e) => e.name).toList());
 }
 
 OutfitModel _outfitModelDeserialize(
@@ -208,19 +220,22 @@ OutfitModel _outfitModelDeserialize(
     categories: reader.readStringList(offsets[0]) ?? const [],
     clothingItemIds: reader.readStringList(offsets[1]) ?? const [],
     createdAt: reader.readDateTime(offsets[2]),
-    id: reader.readString(offsets[3]),
-    imagePreviewPath: reader.readStringOrNull(offsets[4]),
-    isFavorite: reader.readBoolOrNull(offsets[5]) ?? false,
+    dateArchived: reader.readDateTimeOrNull(offsets[3]),
+    id: reader.readString(offsets[4]),
+    imagePreviewPath: reader.readStringOrNull(offsets[5]),
+    isArchived: reader.readBoolOrNull(offsets[6]) ?? false,
+    isFavorite: reader.readBoolOrNull(offsets[7]) ?? false,
     isarId: id,
-    lastWornDate: reader.readDateTimeOrNull(offsets[6]),
-    name: reader.readString(offsets[7]),
-    notes: reader.readStringOrNull(offsets[8]),
-    season: _OutfitModelseasonValueEnumMap[reader.readStringOrNull(offsets[9])],
-    tags: reader.readStringList(offsets[10]) ?? const [],
-    updatedAt: reader.readDateTime(offsets[11]),
-    wearCount: reader.readLongOrNull(offsets[12]) ?? 0,
+    lastWornDate: reader.readDateTimeOrNull(offsets[8]),
+    name: reader.readString(offsets[9]),
+    notes: reader.readStringOrNull(offsets[10]),
+    season:
+        _OutfitModelseasonValueEnumMap[reader.readStringOrNull(offsets[11])],
+    tags: reader.readStringList(offsets[12]) ?? const [],
+    updatedAt: reader.readDateTime(offsets[13]),
+    wearCount: reader.readLongOrNull(offsets[14]) ?? 0,
     weatherRanges: reader
-            .readStringList(offsets[13])
+            .readStringList(offsets[15])
             ?.map((e) =>
                 _OutfitModelweatherRangesValueEnumMap[e] ??
                 WeatherRange.veryHot)
@@ -244,27 +259,31 @@ P _outfitModelDeserializeProp<P>(
     case 2:
       return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
-    case 4:
-      return (reader.readStringOrNull(offset)) as P;
-    case 5:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
-    case 6:
       return (reader.readDateTimeOrNull(offset)) as P;
-    case 7:
+    case 4:
       return (reader.readString(offset)) as P;
-    case 8:
+    case 5:
       return (reader.readStringOrNull(offset)) as P;
+    case 6:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 7:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
+      return (reader.readStringOrNull(offset)) as P;
+    case 11:
       return (_OutfitModelseasonValueEnumMap[reader.readStringOrNull(offset)])
           as P;
-    case 10:
-      return (reader.readStringList(offset) ?? const []) as P;
-    case 11:
-      return (reader.readDateTime(offset)) as P;
     case 12:
-      return (reader.readLongOrNull(offset) ?? 0) as P;
+      return (reader.readStringList(offset) ?? const []) as P;
     case 13:
+      return (reader.readDateTime(offset)) as P;
+    case 14:
+      return (reader.readLongOrNull(offset) ?? 0) as P;
+    case 15:
       return (reader
               .readStringList(offset)
               ?.map((e) =>
@@ -1011,6 +1030,80 @@ extension OutfitModelQueryFilter
     });
   }
 
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'dateArchived',
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'dateArchived',
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'dateArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'dateArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'dateArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      dateArchivedBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'dateArchived',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition> idEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1291,6 +1384,16 @@ extension OutfitModelQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'imagePreviewPath',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterFilterCondition>
+      isArchivedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isArchived',
+        value: value,
       ));
     });
   }
@@ -2463,6 +2566,19 @@ extension OutfitModelQuerySortBy
     });
   }
 
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> sortByDateArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy>
+      sortByDateArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateArchived', Sort.desc);
+    });
+  }
+
   QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> sortById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -2486,6 +2602,18 @@ extension OutfitModelQuerySortBy
       sortByImagePreviewPathDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'imagePreviewPath', Sort.desc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> sortByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> sortByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
     });
   }
 
@@ -2589,6 +2717,19 @@ extension OutfitModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> thenByDateArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy>
+      thenByDateArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateArchived', Sort.desc);
+    });
+  }
+
   QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -2612,6 +2753,18 @@ extension OutfitModelQuerySortThenBy
       thenByImagePreviewPathDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'imagePreviewPath', Sort.desc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> thenByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QAfterSortBy> thenByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
     });
   }
 
@@ -2734,6 +2887,12 @@ extension OutfitModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<OutfitModel, OutfitModel, QDistinct> distinctByDateArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'dateArchived');
+    });
+  }
+
   QueryBuilder<OutfitModel, OutfitModel, QDistinct> distinctById(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2746,6 +2905,12 @@ extension OutfitModelQueryWhereDistinct
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'imagePreviewPath',
           caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<OutfitModel, OutfitModel, QDistinct> distinctByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isArchived');
     });
   }
 
@@ -2835,6 +3000,13 @@ extension OutfitModelQueryProperty
     });
   }
 
+  QueryBuilder<OutfitModel, DateTime?, QQueryOperations>
+      dateArchivedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'dateArchived');
+    });
+  }
+
   QueryBuilder<OutfitModel, String, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
@@ -2845,6 +3017,12 @@ extension OutfitModelQueryProperty
       imagePreviewPathProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'imagePreviewPath');
+    });
+  }
+
+  QueryBuilder<OutfitModel, bool, QQueryOperations> isArchivedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isArchived');
     });
   }
 

@@ -5,6 +5,7 @@ import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
 import '../../core/themes/app_theme.dart';
 import '../providers/stats_provider.dart';
+import 'enhanced_analytics_screen.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
@@ -16,6 +17,18 @@ class StatsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Statistics'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const EnhancedAnalyticsScreen(),
+              ),
+            ),
+            tooltip: 'Advanced Analytics',
+          ),
+        ],
       ),
       body: statsAsync.when(
         data: (stats) => _buildStatsContent(stats),
@@ -499,13 +512,13 @@ class StatsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.name,
+                  _getTypeLabel(item.type),
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  '${_getTypeLabel(item.type)} • Worn ${item.wearCount}x',
+                  'Worn ${item.wearCount}x',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppTheme.mediumGray,

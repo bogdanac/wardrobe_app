@@ -9,13 +9,15 @@ class ClothingItemModel {
   
   @Index(unique: true)
   String id;
-  
+
   String name;
-  
+  String? brand;
+
   @Enumerated(EnumType.name)
   ClothingType type;
   
   String? imagePath;
+  List<String> additionalImages;
   List<String> colors;
   List<String> categories;
   
@@ -31,13 +33,23 @@ class ClothingItemModel {
   DateTime updatedAt;
   String? notes;
   List<String> tags;
+  
+  @Enumerated(EnumType.name)
+  MetallicElements metallicElements;
+
+  @Enumerated(EnumType.name)
+  SizeFit sizeFit;
+
+  bool isArchived;
 
   ClothingItemModel({
     this.isarId,
     required this.id,
     required this.name,
+    this.brand,
     required this.type,
     this.imagePath,
+    this.additionalImages = const [],
     this.colors = const [],
     this.categories = const [],
     this.season,
@@ -48,14 +60,19 @@ class ClothingItemModel {
     required this.updatedAt,
     this.notes,
     this.tags = const [],
+    this.metallicElements = MetallicElements.none,
+    this.sizeFit = SizeFit.perfect,
+    this.isArchived = false,
   });
 
   ClothingItem toEntity() {
     return ClothingItem(
       id: id,
       name: name,
+      brand: brand,
       type: type,
       imagePath: imagePath,
+      additionalImages: additionalImages,
       colors: colors,
       categories: categories,
       season: season,
@@ -66,6 +83,9 @@ class ClothingItemModel {
       updatedAt: updatedAt,
       notes: notes,
       tags: tags,
+      metallicElements: metallicElements,
+      sizeFit: sizeFit,
+      isArchived: isArchived,
     );
   }
 
@@ -73,8 +93,10 @@ class ClothingItemModel {
     return ClothingItemModel(
       id: entity.id,
       name: entity.name,
+      brand: entity.brand,
       type: entity.type,
       imagePath: entity.imagePath,
+      additionalImages: entity.additionalImages,
       colors: entity.colors,
       categories: entity.categories,
       season: entity.season,
@@ -85,6 +107,9 @@ class ClothingItemModel {
       updatedAt: entity.updatedAt,
       notes: entity.notes,
       tags: entity.tags,
+      metallicElements: entity.metallicElements,
+      sizeFit: entity.sizeFit,
+      isArchived: entity.isArchived,
     );
   }
 }

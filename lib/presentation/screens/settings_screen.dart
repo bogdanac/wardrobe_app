@@ -32,20 +32,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeProvider);
     
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Settings'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
           _buildAppSection(settings, themeMode),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildImageProcessingSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildDataSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildBackupSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildAboutSection(),
         ],
       ),
@@ -55,7 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildBackupSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -66,7 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.backup, color: AppTheme.pastelPink),

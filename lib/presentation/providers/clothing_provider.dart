@@ -29,6 +29,8 @@ class ClothingFilterState {
   final List<WeatherRange> weatherRanges;
   final List<String> colors;
   final String searchQuery;
+  final List<SizeFit> sizeFits;
+  final bool showArchived;
 
   const ClothingFilterState({
     this.types = const [],
@@ -37,6 +39,8 @@ class ClothingFilterState {
     this.weatherRanges = const [],
     this.colors = const [],
     this.searchQuery = '',
+    this.sizeFits = const [],
+    this.showArchived = false,
   });
 
   ClothingFilterState copyWith({
@@ -46,6 +50,8 @@ class ClothingFilterState {
     List<WeatherRange>? weatherRanges,
     List<String>? colors,
     String? searchQuery,
+    List<SizeFit>? sizeFits,
+    bool? showArchived,
   }) {
     return ClothingFilterState(
       types: types ?? this.types,
@@ -54,6 +60,8 @@ class ClothingFilterState {
       weatherRanges: weatherRanges ?? this.weatherRanges,
       colors: colors ?? this.colors,
       searchQuery: searchQuery ?? this.searchQuery,
+      sizeFits: sizeFits ?? this.sizeFits,
+      showArchived: showArchived ?? this.showArchived,
     );
   }
 }
@@ -85,6 +93,14 @@ class ClothingFilterNotifier extends StateNotifier<ClothingFilterState> {
     state = state.copyWith(searchQuery: query);
   }
 
+  void updateSizeFits(List<SizeFit> sizeFits) {
+    state = state.copyWith(sizeFits: sizeFits);
+  }
+
+  void updateShowArchived(bool showArchived) {
+    state = state.copyWith(showArchived: showArchived);
+  }
+
   void clearFilters() {
     state = const ClothingFilterState();
   }
@@ -98,15 +114,54 @@ final filteredClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) a
   final repository = ref.read(clothingRepositoryProvider);
   final filter = ref.watch(clothingFilterProvider);
 
+  List<ClothingItem> items;
+
   if (filter.searchQuery.isNotEmpty) {
-    return repository.searchClothingItems(filter.searchQuery);
+    items = await repository.searchClothingItems(filter.searchQuery);
+  } else {
+    items = await repository.filterClothingItems(
+      types: filter.types.isEmpty ? null : filter.types,
+      categories: filter.categories.isEmpty ? null : filter.categories,
+      season: filter.season,
+      weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
+      colors: filter.colors.isEmpty ? null : filter.colors,
+    );
   }
 
-  return repository.filterClothingItems(
-    types: filter.types.isEmpty ? null : filter.types,
-    categories: filter.categories.isEmpty ? null : filter.categories,
-    season: filter.season,
-    weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
-    colors: filter.colors.isEmpty ? null : filter.colors,
-  );
+  // Filter out archived items unless specifically requested
+  if (!filter.showArchived) {
+    items = items.where((item) => !item.isArchived).toList();
+  }
+
+  // Apply size fit filters if any
+  if (filter.sizeFits.isNotEmpty) {
+    items = items.where((item) => filter.sizeFits.contains(item.sizeFit)).toList();
+  }
+
+  // Sort by less worn items first (lower wearCount first)
+  // For items with same wear count, prioritize items not worn recently
+  items.sort((a, b) {
+    // First, compare by wear count (less worn items first)
+    int wearCountComparison = a.wearCount.compareTo(b.wearCount);
+    if (wearCountComparison != 0) {
+      return wearCountComparison;
+    }
+
+    // If wear counts are equal, prioritize items worn less recently
+    // Items never worn (lastWornDate == null) come first
+    if (a.lastWornDate == null && b.lastWornDate == null) {
+      return 0; // Both never worn, maintain current order
+    }
+    if (a.lastWornDate == null) {
+      return -1; // a never worn, comes first
+    }
+    if (b.lastWornDate == null) {
+      return 1; // b never worn, comes first
+    }
+
+    // Both have been worn, prioritize the one worn less recently (older date first)
+    return a.lastWornDate!.compareTo(b.lastWornDate!);
+  });
+
+  return items;
 });

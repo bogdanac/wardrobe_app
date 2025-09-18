@@ -6,7 +6,10 @@ import '../../core/themes/app_theme.dart';
 import '../providers/clothing_provider.dart';
 import '../widgets/clothing_item_card.dart';
 import '../widgets/unified_filters.dart';
+import '../widgets/minimalist_filters.dart';
+import '../widgets/common/empty_state_widget.dart';
 import 'add_clothing_item_screen.dart';
+import 'simple_bulk_add_screen.dart';
 
 class ClosetScreen extends ConsumerStatefulWidget {
   const ClosetScreen({super.key});
@@ -16,13 +19,6 @@ class ClosetScreen extends ConsumerStatefulWidget {
 }
 
 class _ClosetScreenState extends ConsumerState<ClosetScreen> {
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +26,35 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
     final filter = ref.watch(clothingFilterProvider);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('My Closet'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('My Closet'),
+            if (filter.showArchived)
+              Text(
+                'Long press to unarchive items',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+          ],
+        ),
+        titleSpacing: 0,
         actions: [
+          IconButton(
+            icon: Icon(
+              filter.showArchived ? Icons.archive : Icons.archive_outlined,
+              color: filter.showArchived ? Colors.orange : null,
+            ),
+            onPressed: () {
+              ref.read(clothingFilterProvider.notifier).updateShowArchived(!filter.showArchived);
+            },
+            tooltip: filter.showArchived ? 'Hide Archived' : 'Show Archived',
+          ),
           IconButton(
             icon: Icon(
               Icons.filter_list,
@@ -44,18 +66,9 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Search clothing items...',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (query) {
-                ref.read(clothingFilterProvider.notifier).updateSearchQuery(query);
-              },
-            ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: _buildCompactFilters(),
           ),
           Expanded(
             child: filteredClothingItems.when(
@@ -68,67 +81,115 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AddClothingItemScreen(),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: "bulk_add",
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SimpleBulkAddScreen(),
+              ),
+            ),
+            backgroundColor: AppTheme.primaryWhite,
+            foregroundColor: AppTheme.primaryBlack,
+            child: const Icon(Icons.photo_library),
           ),
-        ),
-        child: const Icon(Icons.add),
+          const SizedBox(height: 8),
+          FloatingActionButton(
+            heroTag: "single_add",
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddClothingItemScreen(),
+              ),
+            ),
+            backgroundColor: AppTheme.pastelPink,
+            foregroundColor: AppTheme.primaryBlack,
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildClothingGrid(List<ClothingItem> items) {
     if (items.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.checkroom_outlined,
-              size: 64,
-              color: AppTheme.mediumGray,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'No clothing items found',
-              style: TextStyle(
-                fontSize: 18,
-                color: AppTheme.mediumGray,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Add some items to get started!',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.mediumGray,
-              ),
-            ),
-          ],
+      final filter = ref.watch(clothingFilterProvider);
+      final hasActiveFilters = _hasActiveFilters(filter);
+
+      if (hasActiveFilters) {
+        // Show filtered empty state
+        return EmptyStateWidget(
+          icon: Icons.search_off,
+          iconColor: AppTheme.mediumGray,
+          title: 'No items match your filters',
+          subtitle: 'Try adjusting your search criteria or filters to see more items.',
+          actionText: 'Clear Filters',
+          onActionPressed: () {
+            ref.read(clothingFilterProvider.notifier).clearFilters();
+          },
+        );
+      }
+
+      // Show first-time empty state
+      return EmptyStateWidget(
+        icon: Icons.checkroom_outlined,
+        title: 'Welcome to your digital closet!',
+        subtitle: 'Start building your wardrobe by adding your favorite clothing items. Take photos or choose from your gallery.',
+        actionText: 'Add First Item',
+        onActionPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AddClothingItemScreen(),
+          ),
         ),
+        secondaryActionText: 'Bulk Add Photos',
+        onSecondaryActionPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SimpleBulkAddScreen(),
+          ),
+        ),
+        additionalWidgets: const [
+          QuickTipsWidget(
+            tips: [
+              'Take clear, well-lit photos for best results',
+              'Organize items by type, color, or season',
+              'Use tags to create custom categories',
+              'Archive items you rarely wear',
+            ],
+          ),
+        ],
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: MasonryGridView.count(
         crossAxisCount: 2,
         itemCount: items.length,
-        itemBuilder: (context, index) => ClothingItemCard(
-          item: items[index],
-          onTap: () => _onItemTap(items[index]),
+        itemBuilder: (context, index) => GestureDetector(
+          onLongPress: items[index].isArchived ? () => _showUnarchiveDialog(items[index]) : null,
+          child: ClothingItemCard(
+            item: items[index],
+            onTap: () => _onItemTap(items[index]),
+          ),
         ),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 20,
       ),
     );
   }
 
   void _onItemTap(ClothingItem item) {
-    // Navigate to item details screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddClothingItemScreen(item: item),
+      ),
+    );
   }
 
   bool _hasActiveFilters(ClothingFilterState filter) {
@@ -136,7 +197,31 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
         filter.categories.isNotEmpty ||
         filter.season != null ||
         filter.weatherRanges.isNotEmpty ||
-        filter.colors.isNotEmpty;
+        filter.colors.isNotEmpty ||
+        filter.sizeFits.isNotEmpty;
+  }
+
+  Widget _buildCompactFilters() {
+    final filter = ref.watch(clothingFilterProvider);
+
+    return MinimalistFilters(
+      selectedTypes: filter.types,
+      selectedSeason: filter.season,
+      selectedColors: filter.colors,
+      selectedSizeFits: filter.sizeFits,
+      onTypesChanged: (types) {
+        ref.read(clothingFilterProvider.notifier).updateTypes(types);
+      },
+      onSeasonChanged: (season) {
+        ref.read(clothingFilterProvider.notifier).updateSeason(season);
+      },
+      onColorsChanged: (colors) {
+        ref.read(clothingFilterProvider.notifier).updateColors(colors);
+      },
+      onSizeFitsChanged: (sizeFits) {
+        ref.read(clothingFilterProvider.notifier).updateSizeFits(sizeFits);
+      },
+    );
   }
 
   void _showFilterBottomSheet(BuildContext context) {
@@ -176,12 +261,14 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
               showColors: true,
               showClothingTypes: true,
               showFavorites: false,
+              showMetallicElements: false,
               selectedCategories: currentFilter.categories,
               selectedSeason: currentFilter.season,
               selectedWeatherRanges: currentFilter.weatherRanges,
               selectedColors: currentFilter.colors,
               selectedTypes: currentFilter.types,
               selectedFavorites: null,
+              selectedMetallicElements: null,
               onCategoriesChanged: (categories) {
                 ref.read(clothingFilterProvider.notifier).updateCategories(categories);
               },
@@ -198,6 +285,10 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
                 ref.read(clothingFilterProvider.notifier).updateTypes(types);
               },
               onFavoritesChanged: (favorites) {},
+              onMetallicElementsChanged: (elements) {
+                // For now, metallic elements filtering is disabled in closet screen
+                // This can be enabled later by adding metallic elements to the filter provider
+              },
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -210,6 +301,50 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showUnarchiveDialog(ClothingItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unarchive Item'),
+        content: Text('Do you want to unarchive "${item.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                final repository = ref.read(clothingRepositoryProvider);
+                await repository.unarchiveClothingItem(item.id);
+
+                ref.invalidate(allClothingItemsProvider);
+                ref.invalidate(filteredClothingItemsProvider);
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${item.name} has been unarchived'),
+                    backgroundColor: AppTheme.pastelPink,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to unarchive item: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Unarchive'),
+          ),
+        ],
       ),
     );
   }

@@ -32,16 +32,16 @@ class CustomBottomNav extends StatelessWidget {
         children: [
           _buildNavItem(
             context,
-            icon: Icons.checkroom_outlined,
-            activeIcon: Icons.checkroom,
-            label: 'Closet',
+            icon: Icons.shuffle_outlined,
+            activeIcon: Icons.shuffle,
+            label: 'Generate',
             index: 0,
           ),
           _buildNavItem(
             context,
-            icon: Icons.shuffle_outlined,
-            activeIcon: Icons.shuffle,
-            label: 'Generate',
+            icon: Icons.checkroom_outlined,
+            activeIcon: Icons.checkroom,
+            label: 'Closet',
             index: 1,
           ),
           _buildNavItem(

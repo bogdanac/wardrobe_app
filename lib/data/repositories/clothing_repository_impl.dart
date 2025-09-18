@@ -56,8 +56,6 @@ class ClothingRepositoryImpl implements ClothingRepository {
   Future<List<ClothingItem>> searchClothingItems(String query) async {
     final isar = await _databaseService.isar;
     final models = await isar.clothingItemModels.filter()
-        .nameContains(query, caseSensitive: false)
-        .or()
         .notesIsNotNull()
         .and()
         .notesContains(query, caseSensitive: false)
@@ -112,9 +110,21 @@ class ClothingRepositoryImpl implements ClothingRepository {
   @override
   Future<void> saveClothingItem(ClothingItem item) async {
     final isar = await _databaseService.isar;
+    
+    // Check if item already exists
+    final existingModel = await isar.clothingItemModels.filter().idEqualTo(item.id).findFirst();
+    
     final model = ClothingItemModel.fromEntity(item);
+    
     await isar.writeTxn(() async {
-      await isar.clothingItemModels.put(model);
+      if (existingModel != null) {
+        // Update existing item
+        model.isarId = existingModel.isarId; // Preserve the Isar ID
+        await isar.clothingItemModels.put(model);
+      } else {
+        // Insert new item
+        await isar.clothingItemModels.put(model);
+      }
     });
   }
 
@@ -158,5 +168,36 @@ class ClothingRepositoryImpl implements ClothingRepository {
         await isar.clothingItemModels.put(model);
       });
     }
+  }
+
+  @override
+  Future<void> archiveClothingItem(String id) async {
+    final isar = await _databaseService.isar;
+    final model = await isar.clothingItemModels.filter().idEqualTo(id).findFirst();
+    if (model != null) {
+      model.isArchived = true;
+      await isar.writeTxn(() async {
+        await isar.clothingItemModels.put(model);
+      });
+    }
+  }
+
+  @override
+  Future<void> unarchiveClothingItem(String id) async {
+    final isar = await _databaseService.isar;
+    final model = await isar.clothingItemModels.filter().idEqualTo(id).findFirst();
+    if (model != null) {
+      model.isArchived = false;
+      await isar.writeTxn(() async {
+        await isar.clothingItemModels.put(model);
+      });
+    }
+  }
+
+  @override
+  Future<List<ClothingItem>> getArchivedClothingItems() async {
+    final isar = await _databaseService.isar;
+    final models = await isar.clothingItemModels.filter().isArchivedEqualTo(true).findAll();
+    return models.map((model) => model.toEntity()).toList();
   }
 }

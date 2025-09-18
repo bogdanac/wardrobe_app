@@ -21,4 +21,7 @@ abstract class OutfitRepository {
   Future<void> toggleFavorite(String id);
   Future<void> markAsWornToday(String id);
   Future<void> incrementWearCount(String id);
+  Future<void> archiveOutfit(String id);
+  Future<void> unarchiveOutfit(String id);
+  Future<List<Outfit>> getArchivedOutfits();
 }

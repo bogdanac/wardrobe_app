@@ -15,12 +15,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 2;
   late PageController _pageController;
 
   final List<Widget> _screens = [
-    const ClosetScreen(),
     const GeneratorScreen(),
+    const ClosetScreen(),
     const OutfitsScreen(),
     const StatsScreen(),
     const SettingsScreen(),
@@ -29,7 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = PageController(initialPage: 2);
   }
 
   @override

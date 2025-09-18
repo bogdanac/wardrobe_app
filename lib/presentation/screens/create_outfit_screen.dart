@@ -33,14 +33,14 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
   bool _isFavorite = false;
 
   final List<String> _outfitCategories = [
-    'brunch with the girls',
+    'brunch',
     'period safe',
-    'mall/errands',
+    'errands',
     'work',
     'elegant',
-    'classy events',
+    'events',
     'festivals',
-    'romantic dates',
+    'dates',
     'comfortable',
   ];
 
@@ -76,6 +76,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(widget.outfit == null ? 'Create Outfit' : 'Edit Outfit'),
         actions: [
@@ -118,8 +119,17 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
-          color: AppTheme.lightGray,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.lightGray,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
             children: [
               Row(
@@ -133,7 +143,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                   if (_selectedItemIds.isNotEmpty)
                     TextButton(
                       onPressed: () => setState(() => _selectedItemIds.clear()),
-                      child: const Text('Clear All'),
+                      child: const Text(
+                        'Clear All',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
               ),
@@ -181,7 +195,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                             borderRadius: BorderRadius.circular(8),
                             child: Image.file(
                               File(item.imagePath!),
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                             ),
                           )
                         : const Icon(Icons.checkroom),
@@ -257,13 +271,13 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         final groupedItems = _groupItemsByType(items);
         
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           children: groupedItems.entries.map((entry) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Text(
                     _getTypeLabel(entry.key),
                     style: const TextStyle(
@@ -271,6 +285,8 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                       fontWeight: FontWeight.w600,
                       color: AppTheme.primaryBlack,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 GridView.builder(
@@ -278,9 +294,9 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 6,
+                    childAspectRatio: 0.8,
                   ),
                   itemCount: entry.value.length,
                   itemBuilder: (context, index) {
@@ -294,7 +310,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
             );
           }).toList(),
@@ -311,13 +327,20 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Outfit Name',
               hintText: 'e.g., Summer Brunch Look',
+              filled: true,
+              fillColor: AppTheme.mediumGray.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -326,19 +349,26 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           _buildCategorySelector(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           _buildSeasonSelector(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           _buildWeatherRangeSelector(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           _buildFavoriteToggle(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           TextFormField(
             controller: _notesController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Notes (Optional)',
+              filled: true,
+              fillColor: AppTheme.mediumGray.withValues(alpha: 0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               hintText: 'Additional details about this outfit...',
             ),
             maxLines: 3,
@@ -369,7 +399,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
           children: _outfitCategories.map((category) {
             final isSelected = _selectedCategories.contains(category);
             return FilterChip(
-              label: Text(category),
+              label: Text(
+                category,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
@@ -415,7 +449,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
             ...Season.values.map((season) {
               final isSelected = _selectedSeason == season;
               return ChoiceChip(
-                label: Text(_getSeasonLabel(season)),
+                label: Text(
+                  _getSeasonLabel(season),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 selected: isSelected,
                 onSelected: (selected) {
                   setState(() {
@@ -448,7 +486,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
           children: WeatherRange.values.map((range) {
             final isSelected = _selectedWeatherRanges.contains(range);
             return FilterChip(
-              label: Text(_getWeatherRangeLabel(range)),
+              label: Text(
+                _getWeatherRangeLabel(range),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
@@ -536,7 +578,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                             borderRadius: BorderRadius.circular(8),
                             child: Image.file(
                               File(item!.imagePath!),
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                             ),
                           );
                         }
@@ -642,7 +684,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.outfit == null ? 'Outfit created successfully!' : 'Outfit updated successfully!'),
+            content: Text(
+              widget.outfit == null ? 'Outfit created successfully!' : 'Outfit updated successfully!',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             backgroundColor: AppTheme.pastelPink,
           ),
         );
@@ -650,7 +696,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save outfit: $e'),
+          content: Text(
+            'Failed to save outfit: $e',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -702,7 +752,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to delete outfit: $e'),
+            content: Text(
+              'Failed to delete outfit: $e',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
             backgroundColor: Colors.red,
           ),
         );

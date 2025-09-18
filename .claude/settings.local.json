@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(flutter clean:*)",
-      "Bash(flutter pub:*)"
+      "Bash(flutter pub:*)",
+      "Bash(./gradlew:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter packages pub run build_runner build:*)",
+      "Bash(timeout 15 flutter packages pub run build_runner build --delete-conflicting-outputs)",
+      "Bash(find:*)",
+      "Bash(dart run build_runner:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,31 +1,40 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
+import 'typography.dart';
+import '../../domain/entities/clothing_item.dart';
 
 class AppTheme {
-  static const Color primaryBlack = Color(0xFF1A1A1A);
-  static const Color primaryWhite = Color(0xFFFFFFFF);
-  static const Color pastelPink = Color(0xFFFFB3D1);
-  static const Color gold = Color(0xFFFFD700);
-  static const Color lightGray = Color(0xFF2A2A2A);
-  static const Color mediumGray = Color(0xFF9E9E9E);
-  static const Color darkGray = Color(0xFF424242);
+  // Re-export colors for backward compatibility
+  static const Color primaryBlack = AppColors.primaryBlack;
+  static const Color primaryWhite = AppColors.primaryWhite;
+  static const Color pastelPink = AppColors.pastelPink;
+  static const Color gold = AppColors.gold;
+  static const Color lightGray = AppColors.lightGray;
+  static const Color mediumGray = AppColors.mediumGray;
+  static const Color darkGray = AppColors.darkGray;
+  
+  // Status colors for error handling
+  static const Color error = Colors.red;
+  static const Color success = Colors.green;
+  static const Color warning = Colors.orange;
+  static const Color info = Colors.blue;
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: 'Poppins',
+      fontFamily: AppTypography.primaryFont,
+      textTheme: _buildTextTheme(Brightness.dark),
       scaffoldBackgroundColor: primaryBlack,
       colorScheme: const ColorScheme.dark(
         primary: primaryWhite,
         secondary: pastelPink,
         tertiary: gold,
         surface: lightGray,
-        background: primaryBlack,
         onPrimary: primaryBlack,
         onSecondary: primaryBlack,
         onTertiary: primaryBlack,
         onSurface: primaryWhite,
-        onBackground: primaryWhite,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryBlack,
@@ -149,19 +158,18 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: 'Poppins',
+      fontFamily: AppTypography.primaryFont,
+      textTheme: _buildTextTheme(Brightness.light),
       scaffoldBackgroundColor: primaryWhite,
       colorScheme: const ColorScheme.light(
         primary: primaryBlack,
         secondary: pastelPink,
         tertiary: gold,
         surface: Colors.white,
-        background: primaryWhite,
         onPrimary: primaryWhite,
         onSecondary: primaryBlack,
         onTertiary: primaryBlack,
         onSurface: primaryBlack,
-        onBackground: primaryBlack,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryWhite,
@@ -203,5 +211,39 @@ class AppTheme {
         foregroundColor: primaryBlack,
       ),
     );
+  }
+
+  // Build text theme based on brightness
+  static TextTheme _buildTextTheme(Brightness brightness) {
+    final Color textColor = brightness == Brightness.dark ? primaryWhite : primaryBlack;
+    final Color mutedColor = brightness == Brightness.dark ? mediumGray : darkGray;
+    
+    return TextTheme(
+      displayLarge: AppTypography.h1.copyWith(color: textColor),
+      displayMedium: AppTypography.h2.copyWith(color: textColor),
+      displaySmall: AppTypography.h3.copyWith(color: textColor),
+      headlineLarge: AppTypography.h4.copyWith(color: textColor),
+      headlineMedium: AppTypography.h5.copyWith(color: textColor),
+      headlineSmall: AppTypography.h6.copyWith(color: textColor),
+      titleLarge: AppTypography.cardTitle.copyWith(color: textColor),
+      titleMedium: AppTypography.labelLarge.copyWith(color: textColor),
+      titleSmall: AppTypography.labelMedium.copyWith(color: textColor),
+      bodyLarge: AppTypography.bodyLarge.copyWith(color: textColor),
+      bodyMedium: AppTypography.bodyMedium.copyWith(color: textColor),
+      bodySmall: AppTypography.bodySmall.copyWith(color: mutedColor),
+      labelLarge: AppTypography.button.copyWith(color: textColor),
+      labelMedium: AppTypography.labelMedium.copyWith(color: textColor),
+      labelSmall: AppTypography.labelSmall.copyWith(color: mutedColor),
+    );
+  }
+
+  // Helper method to get seasonal colors
+  static List<Color> getSeasonalColors(Season season) {
+    return AppColors.getSeasonalColors(season);
+  }
+
+  // Helper method to check color compatibility
+  static bool areColorsCompatible(Color color1, Color color2) {
+    return AppColors.areColorsCompatible(color1, color2);
   }
 }

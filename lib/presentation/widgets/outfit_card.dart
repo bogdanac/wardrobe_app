@@ -52,7 +52,7 @@ class OutfitCard extends ConsumerWidget {
                         ),
                         child: Image.file(
                           File(outfit.imagePreviewPath!),
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
                               _buildPlaceholder(ref),
                         ),
@@ -132,6 +132,8 @@ class OutfitCard extends ConsumerWidget {
                           child: const Text(
                             'Wear Today',
                             style: TextStyle(fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -191,7 +193,7 @@ class OutfitCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(4),
                 child: Image.file(
                   File(item!.imagePath!),
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) =>
                       Container(
                         color: AppTheme.lightGray,
@@ -256,6 +258,8 @@ class OutfitCard extends ConsumerWidget {
               fontSize: 10,
               color: AppTheme.primaryBlack,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         );
       }).toList(),

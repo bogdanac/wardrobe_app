@@ -17,13 +17,6 @@ class OutfitsScreen extends ConsumerStatefulWidget {
 }
 
 class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,19 +38,6 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Search outfits...',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (query) {
-                ref.read(outfitFilterProvider.notifier).updateSearchQuery(query);
-              },
-            ),
-          ),
           Expanded(
             child: filteredOutfits.when(
               data: (outfits) => _buildOutfitGrid(outfits),
@@ -114,7 +94,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: MasonryGridView.count(
         crossAxisCount: 2,
         itemCount: outfits.length,
@@ -124,8 +104,8 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
           onFavorite: () => _toggleFavorite(outfits[index]),
           onWear: () => _markAsWornToday(outfits[index]),
         ),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 20,
       ),
     );
   }
@@ -252,6 +232,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
               onFavoritesChanged: (favorites) {
                 ref.read(outfitFilterProvider.notifier).updateFavoriteFilter(favorites);
               },
+              onMetallicElementsChanged: (elements) {},
             ),
             const SizedBox(height: 16),
             SizedBox(

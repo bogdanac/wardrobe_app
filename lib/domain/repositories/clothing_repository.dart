@@ -20,4 +20,7 @@ abstract class ClothingRepository {
   Future<void> deleteClothingItem(String id);
   Future<void> incrementWearCount(String id);
   Future<void> markAsWornToday(String id);
+  Future<void> archiveClothingItem(String id);
+  Future<void> unarchiveClothingItem(String id);
+  Future<List<ClothingItem>> getArchivedClothingItems();
 }
