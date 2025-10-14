@@ -8,9 +8,9 @@ import '../../core/config/api_config.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/outfit_provider.dart';
 import '../providers/stats_provider.dart';
-import '../providers/theme_provider.dart';
 import '../providers/settings_provider.dart';
 import 'manage_categories_screen.dart';
+import 'manage_colors_screen.dart';
 
 // Type alias for cleaner code
 typedef RemovalMethod = BackgroundRemovalMethod;
@@ -29,8 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    final themeMode = ref.watch(themeProvider);
-    
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -39,7 +38,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
-          _buildAppSection(settings, themeMode),
+          _buildAppSection(settings),
           const SizedBox(height: 32),
           _buildImageProcessingSection(),
           const SizedBox(height: 32),
@@ -100,7 +99,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.restore, color: AppTheme.primaryBlack),
+              leading: Icon(Icons.restore, color: Theme.of(context).colorScheme.onSurface),
               title: const Text('Restore Backup'),
               subtitle: const Text('Import wardrobe data from backup'),
               trailing: _isProcessing
@@ -217,6 +216,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.cleaning_services, color: AppTheme.gold),
+              title: const Text('Clean Up Categories'),
+              subtitle: const Text('Remove "unassigned" from all items'),
+              trailing: _isProcessing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_ios),
+              onTap: _isProcessing ? null : _cleanupUnassignedCategories,
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.delete_sweep, color: Colors.red),
               title: const Text('Clear All Data'),
               subtitle: const Text('Delete all items and outfits'),
@@ -229,7 +243,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildAppSection(SettingsState settings, ThemeMode themeMode) {
+  Widget _buildAppSection(SettingsState settings) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -255,6 +269,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.palette, color: AppTheme.gold),
+              title: const Text('Manage Colors'),
+              subtitle: const Text('Customize your color palette'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _navigateToManageColors,
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications, color: AppTheme.mediumGray),
               title: const Text('Notifications'),
               subtitle: const Text('Manage app notifications'),
@@ -262,20 +285,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 value: settings.notificationsEnabled,
                 onChanged: (value) {
                   ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
-                },
-                activeThumbColor: AppTheme.pastelPink,
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.dark_mode, color: AppTheme.mediumGray),
-              title: const Text('Dark Mode'),
-              subtitle: const Text('Toggle dark theme'),
-              trailing: Switch(
-                value: themeMode == ThemeMode.dark,
-                onChanged: (value) {
-                  ref.read(themeProvider.notifier).toggleDarkMode();
                 },
                 activeThumbColor: AppTheme.pastelPink,
               ),
@@ -475,13 +484,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(filteredOutfitsProvider);
     ref.invalidate(favoriteOutfitsProvider);
     ref.invalidate(wardrobeStatsProvider);
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Data refreshed successfully!'),
         backgroundColor: AppTheme.pastelPink,
       ),
     );
+  }
+
+  Future<void> _cleanupUnassignedCategories() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final repository = ref.read(clothingRepositoryProvider);
+      final allItems = await repository.getAllClothingItems();
+
+      int updatedCount = 0;
+      for (final item in allItems) {
+        if (item.categories.contains('unassigned')) {
+          final updatedCategories = item.categories.where((cat) => cat != 'unassigned').toList();
+          final updatedItem = item.copyWith(categories: updatedCategories);
+          await repository.saveClothingItem(updatedItem);
+          updatedCount++;
+        }
+      }
+
+      // Refresh data
+      ref.invalidate(allClothingItemsProvider);
+      ref.invalidate(filteredClothingItemsProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cleaned up $updatedCount item(s)'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error cleaning up categories: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 
   void _showBackgroundRemovalDialog(RemovalMethod currentMethod) {
@@ -712,6 +766,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const ManageCategoriesScreen(),
+      ),
+    );
+  }
+
+  void _navigateToManageColors() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ManageColorsScreen(),
       ),
     );
   }

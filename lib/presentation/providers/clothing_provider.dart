@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/repositories/clothing_repository.dart';
-import '../../data/repositories/clothing_repository_impl.dart';
+import '../../data/repositories/clothing_repository_factory.dart';
 
 final clothingRepositoryProvider = Provider<ClothingRepository>((ref) {
-  return ClothingRepositoryImpl();
+  // Uses platform-specific repository:
+  // Web: Firebase (cloud storage)
+  // Mobile: Isar (local storage, keeps existing data)
+  return createClothingRepository();
 });
 
 final allClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) async {

@@ -5,11 +5,11 @@ import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
 import '../providers/clothing_provider.dart';
 import '../widgets/clothing_item_card.dart';
-import '../widgets/unified_filters.dart';
 import '../widgets/minimalist_filters.dart';
 import '../widgets/common/empty_state_widget.dart';
 import 'add_clothing_item_screen.dart';
 import 'simple_bulk_add_screen.dart';
+import 'create_outfit_screen.dart';
 
 class ClosetScreen extends ConsumerStatefulWidget {
   const ClosetScreen({super.key});
@@ -19,55 +19,21 @@ class ClosetScreen extends ConsumerStatefulWidget {
 }
 
 class _ClosetScreenState extends ConsumerState<ClosetScreen> {
+  bool _isSelectionMode = false;
+  final Set<String> _selectedItems = {};
 
   @override
   Widget build(BuildContext context) {
     final filteredClothingItems = ref.watch(filteredClothingItemsProvider);
-    final filter = ref.watch(clothingFilterProvider);
+    ref.watch(clothingFilterProvider);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('My Closet'),
-            if (filter.showArchived)
-              Text(
-                'Long press to unarchive items',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.orange.withValues(alpha: 0.8),
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-          ],
-        ),
-        titleSpacing: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              filter.showArchived ? Icons.archive : Icons.archive_outlined,
-              color: filter.showArchived ? Colors.orange : null,
-            ),
-            onPressed: () {
-              ref.read(clothingFilterProvider.notifier).updateShowArchived(!filter.showArchived);
-            },
-            tooltip: filter.showArchived ? 'Hide Archived' : 'Show Archived',
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.filter_list,
-              color: _hasActiveFilters(filter) ? AppTheme.pastelPink : null,
-            ),
-            onPressed: () => _showFilterBottomSheet(context),
-          ),
-        ],
-      ),
+      appBar: _isSelectionMode ? _buildSelectionAppBar() : null,
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
             child: _buildCompactFilters(),
           ),
           Expanded(
@@ -81,36 +47,38 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.small(
-            heroTag: "bulk_add",
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SimpleBulkAddScreen(),
-              ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: "bulk_add",
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SimpleBulkAddScreen(),
+                    ),
+                  ),
+                  backgroundColor: AppTheme.primaryWhite,
+                  foregroundColor: AppTheme.primaryBlack,
+                  child: const Icon(Icons.photo_library),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton(
+                  heroTag: "single_add",
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddClothingItemScreen(),
+                    ),
+                  ),
+                  backgroundColor: AppTheme.pastelPink,
+                  foregroundColor: AppTheme.primaryBlack,
+                  child: const Icon(Icons.add),
+                ),
+              ],
             ),
-            backgroundColor: AppTheme.primaryWhite,
-            foregroundColor: AppTheme.primaryBlack,
-            child: const Icon(Icons.photo_library),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: "single_add",
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AddClothingItemScreen(),
-              ),
-            ),
-            backgroundColor: AppTheme.pastelPink,
-            foregroundColor: AppTheme.primaryBlack,
-            child: const Icon(Icons.add),
-          ),
-        ],
-      ),
     );
   }
 
@@ -166,31 +134,64 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       child: MasonryGridView.count(
         crossAxisCount: 2,
         itemCount: items.length,
-        itemBuilder: (context, index) => GestureDetector(
-          onLongPress: items[index].isArchived ? () => _showUnarchiveDialog(items[index]) : null,
+        itemBuilder: (context, index) => InkWell(
+          onTap: () => _onItemTap(items[index]),
+          onLongPress: items[index].isArchived
+              ? () => _showUnarchiveDialog(items[index])
+              : () => _onItemLongPress(items[index]),
           child: ClothingItemCard(
             item: items[index],
-            onTap: () => _onItemTap(items[index]),
+            isSelected: _selectedItems.contains(items[index].id),
           ),
         ),
-        mainAxisSpacing: 20,
-        crossAxisSpacing: 20,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
       ),
     );
   }
 
   void _onItemTap(ClothingItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddClothingItemScreen(item: item),
-      ),
-    );
+    if (_isSelectionMode) {
+      _toggleItemSelection(item.id);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AddClothingItemScreen(item: item),
+        ),
+      );
+    }
   }
+
+  void _onItemLongPress(ClothingItem item) {
+    print('Long press detected on item: ${item.id}');
+    if (!_isSelectionMode) {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedItems.add(item.id);
+      });
+      print('Selection mode activated');
+    }
+  }
+
+  void _toggleItemSelection(String itemId) {
+    setState(() {
+      if (_selectedItems.contains(itemId)) {
+        _selectedItems.remove(itemId);
+        if (_selectedItems.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedItems.add(itemId);
+      }
+    });
+  }
+
+
 
   bool _hasActiveFilters(ClothingFilterState filter) {
     return filter.types.isNotEmpty ||
@@ -201,6 +202,178 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
         filter.sizeFits.isNotEmpty;
   }
 
+  PreferredSizeWidget _buildSelectionAppBar() {
+    final filteredClothingItems = ref.watch(filteredClothingItemsProvider);
+    final totalItems = filteredClothingItems.maybeWhen(
+      data: (items) => items.where((item) => !item.isArchived).length,
+      orElse: () => 0,
+    );
+    final allSelected = _selectedItems.length == totalItems && totalItems > 0;
+
+    return AppBar(
+      backgroundColor: AppTheme.lightGray,
+      foregroundColor: AppTheme.primaryBlack,
+      toolbarHeight: 48,
+      leadingWidth: 40,
+      leading: IconButton(
+        icon: const Icon(Icons.close, size: 20),
+        color: AppTheme.mediumGray,
+        padding: EdgeInsets.zero,
+        onPressed: () {
+          setState(() {
+            _isSelectionMode = false;
+            _selectedItems.clear();
+          });
+        },
+      ),
+      title: Row(
+        children: [
+          IconButton(
+            icon: Icon(
+              allSelected ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 20,
+              color: AppTheme.mediumGray,
+            ),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+            onPressed: () {
+              setState(() {
+                if (allSelected) {
+                  _selectedItems.clear();
+                } else {
+                  filteredClothingItems.whenData((items) {
+                    _selectedItems.addAll(
+                      items.where((item) => !item.isArchived).map((item) => item.id),
+                    );
+                  });
+                }
+              });
+            },
+            tooltip: allSelected ? 'Deselect All' : 'Select All',
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${_selectedItems.length}',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const Spacer(),
+          // Action buttons on the right side of title
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 22),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+            color: _selectedItems.isEmpty ? AppTheme.mediumGray : Colors.red,
+            onPressed: _selectedItems.isEmpty ? null : () => _showDeleteDialog(),
+            tooltip: 'Delete',
+          ),
+          IconButton(
+            icon: const Icon(Icons.archive_outlined, size: 22),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+            color: _selectedItems.isEmpty ? AppTheme.mediumGray : Colors.orange,
+            onPressed: _selectedItems.isEmpty ? null : () => _showArchiveDialog(),
+            tooltip: 'Archive',
+          ),
+          IconButton(
+            icon: const Icon(Icons.checkroom, size: 22),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+            color: _selectedItems.isEmpty ? AppTheme.mediumGray : AppTheme.pastelPink,
+            onPressed: _selectedItems.isEmpty ? null : () => _createOutfitFromSelection(),
+            tooltip: 'Create Outfit',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Items'),
+        content: Text('Delete ${_selectedItems.length} selected item(s)?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final repository = ref.read(clothingRepositoryProvider);
+              for (final id in _selectedItems) {
+                await repository.deleteClothingItem(id);
+              }
+              ref.invalidate(allClothingItemsProvider);
+              ref.invalidate(filteredClothingItemsProvider);
+              setState(() {
+                _isSelectionMode = false;
+                _selectedItems.clear();
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Items deleted')),
+              );
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showArchiveDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive Items'),
+        content: Text('Archive ${_selectedItems.length} selected item(s)?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final repository = ref.read(clothingRepositoryProvider);
+              for (final id in _selectedItems) {
+                await repository.archiveClothingItem(id);
+              }
+              ref.invalidate(allClothingItemsProvider);
+              ref.invalidate(filteredClothingItemsProvider);
+              setState(() {
+                _isSelectionMode = false;
+                _selectedItems.clear();
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Items archived')),
+              );
+            },
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _createOutfitFromSelection() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateOutfitScreen(
+          initialSelectedItemIds: _selectedItems.toList(),
+        ),
+      ),
+    ).then((_) {
+      // Exit selection mode after creating outfit
+      setState(() {
+        _isSelectionMode = false;
+        _selectedItems.clear();
+      });
+    });
+  }
+
   Widget _buildCompactFilters() {
     final filter = ref.watch(clothingFilterProvider);
 
@@ -208,7 +381,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
       selectedTypes: filter.types,
       selectedSeason: filter.season,
       selectedColors: filter.colors,
-      selectedSizeFits: filter.sizeFits,
+      selectedCategories: filter.categories,
       onTypesChanged: (types) {
         ref.read(clothingFilterProvider.notifier).updateTypes(types);
       },
@@ -218,92 +391,12 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
       onColorsChanged: (colors) {
         ref.read(clothingFilterProvider.notifier).updateColors(colors);
       },
-      onSizeFitsChanged: (sizeFits) {
-        ref.read(clothingFilterProvider.notifier).updateSizeFits(sizeFits);
+      onCategoriesChanged: (categories) {
+        ref.read(clothingFilterProvider.notifier).updateCategories(categories);
       },
     );
   }
 
-  void _showFilterBottomSheet(BuildContext context) {
-    final currentFilter = ref.read(clothingFilterProvider);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Filter Items',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    ref.read(clothingFilterProvider.notifier).clearFilters();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Clear All'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            UnifiedFilters(
-              showCategories: true,
-              showSeasons: true,
-              showWeather: true,
-              showColors: true,
-              showClothingTypes: true,
-              showFavorites: false,
-              showMetallicElements: false,
-              selectedCategories: currentFilter.categories,
-              selectedSeason: currentFilter.season,
-              selectedWeatherRanges: currentFilter.weatherRanges,
-              selectedColors: currentFilter.colors,
-              selectedTypes: currentFilter.types,
-              selectedFavorites: null,
-              selectedMetallicElements: null,
-              onCategoriesChanged: (categories) {
-                ref.read(clothingFilterProvider.notifier).updateCategories(categories);
-              },
-              onSeasonChanged: (season) {
-                ref.read(clothingFilterProvider.notifier).updateSeason(season);
-              },
-              onWeatherChanged: (ranges) {
-                ref.read(clothingFilterProvider.notifier).updateWeatherRanges(ranges);
-              },
-              onColorsChanged: (colors) {
-                ref.read(clothingFilterProvider.notifier).updateColors(colors);
-              },
-              onTypesChanged: (types) {
-                ref.read(clothingFilterProvider.notifier).updateTypes(types);
-              },
-              onFavoritesChanged: (favorites) {},
-              onMetallicElementsChanged: (elements) {
-                // For now, metallic elements filtering is disabled in closet screen
-                // This can be enabled later by adding metallic elements to the filter provider
-              },
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Apply Filters'),
-              ),
-            ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showUnarchiveDialog(ClothingItem item) {
     showDialog(
@@ -348,4 +441,6 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
       ),
     );
   }
+
+
 }

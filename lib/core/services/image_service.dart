@@ -11,6 +11,7 @@ import '../config/api_config.dart';
 import '../config/background_removal_config.dart';
 import '../errors/app_exceptions.dart';
 import 'image_processing_isolate.dart';
+import 'color_palette_service.dart';
 
 // Type alias for cleaner code  
 typedef RemovalMethod = BackgroundRemovalMethod;
@@ -515,28 +516,53 @@ class ImageService {
     final maxX = boundingBox['maxX']!;
     final minY = boundingBox['minY']!;
     final maxY = boundingBox['maxY']!;
-    
+
     final itemWidth = maxX - minX + 1;
     final itemHeight = maxY - minY + 1;
-    
-    // Target square aspect ratio for clothing items
-    final targetSize = math.max(itemWidth, itemHeight);
-    
-    // Calculate centering offsets
-    final extraWidth = targetSize - itemWidth;
-    final extraHeight = targetSize - itemHeight;
-    
-    final newMinX = math.max(0, minX - extraWidth ~/ 2);
-    final newMaxX = math.min(image.width - 1, maxX + extraWidth ~/ 2);
-    final newMinY = math.max(0, minY - extraHeight ~/ 2);
-    final newMaxY = math.min(image.height - 1, maxY + extraHeight ~/ 2);
-    
-    // Crop the image
-    return img.copyCrop(image, 
-        x: newMinX, 
-        y: newMinY, 
-        width: newMaxX - newMinX + 1, 
-        height: newMaxY - newMinY + 1);
+
+    // Add small padding around the item (5% of dimensions)
+    final padding = math.max(itemWidth, itemHeight) * 0.05;
+
+    // Calculate crop area with padding
+    final cropMinX = math.max(0, minX - padding.round());
+    final cropMaxX = math.min(image.width - 1, maxX + padding.round());
+    final cropMinY = math.max(0, minY - padding.round());
+    final cropMaxY = math.min(image.height - 1, maxY + padding.round());
+
+    final cropWidth = cropMaxX - cropMinX + 1;
+    final cropHeight = cropMaxY - cropMinY + 1;
+
+    // Crop to the content area first
+    final cropped = img.copyCrop(image,
+        x: cropMinX,
+        y: cropMinY,
+        width: cropWidth,
+        height: cropHeight);
+
+    // If already roughly square, return as is
+    final aspectRatio = cropWidth / cropHeight;
+    if (aspectRatio > 0.85 && aspectRatio < 1.15) {
+      return cropped;
+    }
+
+    // Create a square canvas with transparent background
+    final targetSize = math.max(cropWidth, cropHeight);
+    final squared = img.Image(width: targetSize, height: targetSize);
+
+    // Fill with transparent pixels
+    for (int y = 0; y < squared.height; y++) {
+      for (int x = 0; x < squared.width; x++) {
+        squared.setPixelRgba(x, y, 0, 0, 0, 0);
+      }
+    }
+
+    // Center the cropped image on the transparent canvas
+    final offsetX = (targetSize - cropWidth) ~/ 2;
+    final offsetY = (targetSize - cropHeight) ~/ 2;
+
+    img.compositeImage(squared, cropped, dstX: offsetX, dstY: offsetY);
+
+    return squared;
   }
   
   /// Post-process edges for better quality
@@ -612,28 +638,54 @@ class ImageService {
       final imageProvider = FileImage(imageFile);
       final paletteGenerator = await PaletteGenerator.fromImageProvider(
         imageProvider,
-        maximumColorCount: maxColors,
+        maximumColorCount: 20, // Extract more colors for better matching
       );
 
-      final colors = <Color>[];
-      
+      final detectedColors = <Color>[];
+
       if (paletteGenerator.dominantColor != null) {
         final dominantColor = paletteGenerator.dominantColor!.color;
         if (!_isMetallicColor(dominantColor)) {
-          colors.add(dominantColor);
-        }
-      }
-      
-      for (final color in paletteGenerator.colors) {
-        if (colors.length >= maxColors) break;
-        if (!colors.contains(color) && !_isMetallicColor(color)) {
-          colors.add(color);
+          detectedColors.add(dominantColor);
         }
       }
 
-      return colors.isEmpty ? [Colors.grey] : colors;
+      for (final color in paletteGenerator.colors) {
+        if (detectedColors.length >= 10) break;
+        if (!detectedColors.contains(color) && !_isMetallicColor(color)) {
+          detectedColors.add(color);
+        }
+      }
+
+      // Map detected colors to custom palette
+      final colorService = ColorPaletteService();
+      final mappedColors = <Color>[];
+      final usedPaletteColors = <Color>{};
+
+      for (final detectedColor in detectedColors) {
+        if (mappedColors.length >= maxColors) break;
+
+        final closestMatch = colorService.findClosestColor(detectedColor);
+        final matchedColor = _hexToColor(closestMatch['hex']!);
+
+        // Only add if we haven't used this palette color yet
+        if (!usedPaletteColors.contains(matchedColor)) {
+          mappedColors.add(matchedColor);
+          usedPaletteColors.add(matchedColor);
+        }
+      }
+
+      return mappedColors.isEmpty ? [Colors.grey] : mappedColors;
     } catch (e) {
       throw Exception('Failed to extract colors: $e');
+    }
+  }
+
+  Color _hexToColor(String hex) {
+    try {
+      return Color(int.parse(hex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return Colors.grey;
     }
   }
 

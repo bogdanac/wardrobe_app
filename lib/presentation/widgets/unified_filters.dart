@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/utils/category_colors.dart';
-import '../providers/clothing_provider.dart';
 
 class UnifiedFilters extends ConsumerStatefulWidget {
   final bool showCategories;
@@ -93,91 +92,19 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
   }
 
   Future<void> _loadWardrobeColors() async {
-    try {
-      final clothingRepository = ref.read(clothingRepositoryProvider);
-      final allItems = await clothingRepository.getAllClothingItems();
-      
-      final Map<String, int> colorCounts = {};
-      for (final item in allItems) {
-        for (final color in item.colors) {
-          final normalizedColor = _normalizeColor(color.toLowerCase().trim());
-          colorCounts[normalizedColor] = (colorCounts[normalizedColor] ?? 0) + 1;
-        }
-      }
-      
-      final sortedColors = colorCounts.entries
-          .where((entry) => entry.value > 0)
-          .toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      
-      final mostCommon = sortedColors.take(6).map((e) => e.key).toList();
-      
-      final allPossibleColors = {
-        'black', 'white', 'gray', 'brown', 'beige',
-        'red', 'pink', 'orange', 'yellow',
-        'green', 'blue', 'navy', 'purple',
-        'teal', 'coral', 'burgundy', 'olive',
-        'cream', 'tan', 'maroon', 'mint',
-        'lavender', 'gold', 'crimson', 'emerald',
-        'turquoise', 'magenta', 'lime', 'indigo', 'rose', 'amber',
-      }.toList();
-      
-      final randomColors = <String>[];
-      final remainingColors = allPossibleColors.where((c) => !mostCommon.contains(c)).toList();
-      remainingColors.shuffle();
-      randomColors.addAll(remainingColors.take(12));
-      
-      final combinedColors = [...mostCommon, ...randomColors];
-      final uniqueColors = <String>[];
-      final seen = <String>{};
-      
-      for (final color in combinedColors) {
-        final normalized = _normalizeColor(color.toLowerCase().trim());
-        if (!seen.contains(normalized)) {
-          seen.add(normalized);
-          uniqueColors.add(normalized);
-        }
-      }
-      
-      setState(() {
-        _wardrobeColors = uniqueColors;
-      });
-    } catch (e) {
-      final fallbackColors = [
-        'black', 'white', 'red', 'blue', 'green', 'purple',
-        'pink', 'orange', 'yellow', 'teal', 'coral', 'burgundy',
-        'navy', 'mint', 'lavender', 'gold', 'crimson', 'emerald',
-        'turquoise', 'magenta', 'lime', 'indigo', 'rose', 'amber',
+    // Fixed set of 6 distinct colors as specified
+    setState(() {
+      _wardrobeColors = [
+        'white',
+        'black',
+        'pastel blue',
+        'pastel pink',
+        'fuchsia',
+        'multicolor'
       ];
-      fallbackColors.shuffle();
-      setState(() {
-        _wardrobeColors = fallbackColors.toSet().toList();
-      });
-    }
+    });
   }
 
-  String _normalizeColor(String color) {
-    final colorMap = {
-      'grey': 'gray', 'gray': 'gray', 'grey-blue': 'gray',
-      'light gray': 'gray', 'dark gray': 'gray',
-      'light grey': 'gray', 'dark grey': 'gray',
-      'navy blue': 'navy', 'dark blue': 'navy',
-      'light blue': 'blue', 'sky blue': 'blue',
-      'royal blue': 'blue', 'baby blue': 'blue',
-      'light green': 'green', 'dark green': 'green',
-      'forest green': 'green', 'lime green': 'lime',
-      'olive green': 'olive', 'light pink': 'pink',
-      'hot pink': 'pink', 'baby pink': 'pink',
-      'bright pink': 'pink', 'dark red': 'red',
-      'bright red': 'red', 'deep red': 'red',
-      'wine red': 'burgundy', 'dark purple': 'purple',
-      'light purple': 'purple', 'bright purple': 'purple',
-      'off white': 'white', 'cream white': 'cream',
-      'ivory': 'cream', 'beige': 'beige',
-      'tan': 'tan', 'khaki': 'beige',
-    };
-    return colorMap[color] ?? color;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,15 +156,20 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
         ),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 4,
-          runSpacing: 0,
+          spacing: 6,
+          runSpacing: 6,
           children: _allCategories.map((category) {
             final isSelected = widget.selectedCategories.contains(category);
+            final baseColor = CategoryColors.getCategoryColor(category);
             return FilterChip(
               label: Text(category),
               selected: isSelected,
-              selectedColor: CategoryColors.getCategoryColor(category),
-              backgroundColor: CategoryColors.getCategoryColor(category).withValues(alpha: 0.9),
+              selectedColor: baseColor,
+              backgroundColor: baseColor.withValues(alpha: 0.9),
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 final newCategories = List<String>.from(widget.selectedCategories);
                 if (selected) {
@@ -276,6 +208,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
               selected: isSelected,
               selectedColor: _getSeasonColor(season),
               backgroundColor: _getSeasonColor(season).withValues(alpha: 0.9),
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 widget.onSeasonChanged(season);
               },
@@ -291,7 +227,7 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Weather Range',
+          'Weather',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -308,6 +244,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
               selected: isSelected,
               selectedColor: _getWeatherColor(range),
               backgroundColor: _getWeatherColor(range).withValues(alpha: 0.9),
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 final newRanges = List<WeatherRange>.from(widget.selectedWeatherRanges);
                 if (selected) {
@@ -399,6 +339,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
             return FilterChip(
               label: Text(_getClothingTypeLabel(type)),
               selected: isSelected,
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 final newTypes = List<ClothingType>.from(widget.selectedTypes);
                 if (selected) {
@@ -434,6 +378,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
             ChoiceChip(
               label: const Text('All'),
               selected: widget.selectedFavorites == null,
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 widget.onFavoritesChanged(null);
               },
@@ -441,6 +389,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
             ChoiceChip(
               label: const Text('Favorites Only'),
               selected: widget.selectedFavorites == true,
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 widget.onFavoritesChanged(selected ? true : null);
               },
@@ -470,6 +422,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
             ChoiceChip(
               label: const Text('All'),
               selected: widget.selectedMetallicElements == null,
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
               onSelected: (selected) {
                 widget.onMetallicElementsChanged(null);
               },
@@ -481,6 +437,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
                 selected: isSelected,
                 selectedColor: _getMetallicElementsColor(element),
                 backgroundColor: _getMetallicElementsColor(element).withValues(alpha: 0.2),
+                side: BorderSide.none,
+                labelStyle: const TextStyle(
+                  color: Colors.white,
+                ),
                 onSelected: (selected) {
                   widget.onMetallicElementsChanged(selected ? element : null);
                 },
@@ -494,36 +454,12 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
 
   Color _getColorFromName(String colorName) {
     switch (colorName.toLowerCase()) {
-      case 'black': return Colors.black;
       case 'white': return Colors.white;
-      case 'gray': return Colors.grey;
-      case 'brown': return Colors.brown;
-      case 'beige': return const Color(0xFFF5F5DC);
-      case 'red': return Colors.red;
-      case 'pink': return Colors.pink;
-      case 'orange': return Colors.orange;
-      case 'yellow': return Colors.yellow;
-      case 'green': return Colors.green;
-      case 'blue': return Colors.blue;
-      case 'navy': return const Color(0xFF000080);
-      case 'purple': return Colors.purple;
-      case 'teal': return Colors.teal;
-      case 'coral': return const Color(0xFFFF7F50);
-      case 'burgundy': return const Color(0xFF800020);
-      case 'olive': return const Color(0xFF808000);
-      case 'cream': return const Color(0xFFFFFDD0);
-      case 'tan': return const Color(0xFFD2B48C);
-      case 'maroon': return const Color(0xFF800000);
-      case 'mint': return const Color(0xFF98FF98);
-      case 'lavender': return const Color(0xFFE6E6FA);
-      case 'gold': return const Color(0xFFFFD700);
-      case 'crimson': return const Color(0xFFDC143C);
-      case 'emerald': return const Color(0xFF50C878);
-      case 'turquoise': return const Color(0xFF40E0D0);
-      case 'lime': return const Color(0xFF00FF00);
-      case 'indigo': return Colors.indigo;
-      case 'rose': return const Color(0xFFFF007F);
-      case 'amber': return const Color(0xFFFFBF00);
+      case 'black': return Colors.black;
+      case 'pastel blue': return const Color(0xFFB3D9FF);
+      case 'pastel pink': return const Color(0xFFFFB3D9);
+      case 'fuchsia': return const Color(0xFFFF00FF);
+      case 'multicolor': return const Color(0xFF808080); // Gray to represent multicolor
       default: return Colors.grey;
     }
   }
@@ -556,19 +492,10 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
       case ClothingType.shoes: return 'Shoes';
       case ClothingType.accessory: return 'Accessory';
       case ClothingType.outerwear: return 'Outerwear';
-      case ClothingType.undergarment: return 'Undergarment';
-      case ClothingType.jewelry: return 'Jewelry';
       case ClothingType.bag: return 'Bag';
-      case ClothingType.hat: return 'Hat';
-      case ClothingType.scarf: return 'Scarf';
-      case ClothingType.belt: return 'Belt';
-      case ClothingType.gloves: return 'Gloves';
       case ClothingType.swimwear: return 'Swimwear';
-      case ClothingType.sleepwear: return 'Sleepwear';
       case ClothingType.activewear: return 'Activewear';
       case ClothingType.dress: return 'Dress';
-      case ClothingType.jumpsuit: return 'Jumpsuit';
-      case ClothingType.suit: return 'Suit';
     }
   }
 

@@ -45,7 +45,7 @@ class ColorPaletteModel {
     return ColorPaletteModel(
       id: entity.id,
       name: entity.name,
-      colorValues: entity.colors.map((color) => color.value).toList(),
+      colorValues: entity.colors.map((color) => color.toARGB32()).toList(),
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       description: entity.description,

@@ -411,8 +411,7 @@ class MLOutfitRecommender {
       
       // Type-specific occasion bonuses
       if (occasion.contains('formal') || occasion.contains('work')) {
-        if (item.type == ClothingType.suit || 
-            item.categories.any((c) => c.toLowerCase().contains('formal'))) {
+        if (item.categories.any((c) => c.toLowerCase().contains('formal'))) {
           score += 0.4;
         }
       }
@@ -643,16 +642,11 @@ class MLOutfitRecommender {
   List<ClothingType> _getOptionalTypes(RecommendationContext context) {
     final optional = [
       ClothingType.accessory,
-      ClothingType.jewelry,
       ClothingType.bag,
-      ClothingType.hat,
-      ClothingType.scarf,
     ];
 
-    if (context.season == Season.winter) {
-      optional.addAll([ClothingType.outerwear, ClothingType.gloves]);
-    } else if (context.season == Season.summer) {
-      optional.add(ClothingType.hat);
+    if (context.season == Season.winter || context.season == Season.summer) {
+      optional.add(ClothingType.outerwear);
     }
 
     return optional;

@@ -421,7 +421,7 @@ class _QuickStartWizardState extends ConsumerState<QuickStartWizard> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryBlack,
+                  color: AppTheme.gold,
                 ),
               ),
             ],
@@ -468,34 +468,16 @@ class _QuickStartWizardState extends ConsumerState<QuickStartWizard> {
         return Icons.directions_run;
       case ClothingType.outerwear:
         return Icons.ac_unit;
-      case ClothingType.undergarment:
-        return Icons.favorite;
       case ClothingType.accessory:
         return Icons.watch;
-      case ClothingType.sleepwear:
-        return Icons.bedtime;
       case ClothingType.activewear:
         return Icons.fitness_center;
       case ClothingType.swimwear:
         return Icons.pool;
-      case ClothingType.jewelry:
-        return Icons.diamond;
       case ClothingType.bag:
         return Icons.shopping_bag;
-      case ClothingType.hat:
-        return Icons.local_fire_department;
-      case ClothingType.scarf:
-        return Icons.waves;
-      case ClothingType.belt:
-        return Icons.horizontal_rule;
-      case ClothingType.gloves:
-        return Icons.back_hand;
       case ClothingType.dress:
         return Icons.woman;
-      case ClothingType.jumpsuit:
-        return Icons.person;
-      case ClothingType.suit:
-        return Icons.business_center;
     }
   }
 

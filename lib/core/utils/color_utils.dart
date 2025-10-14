@@ -8,7 +8,7 @@ class ColorUtils {
   }
 
   static String colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+    return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
   }
 
   static bool areColorsCompatible(Color color1, Color color2) {
@@ -26,9 +26,9 @@ class ColorUtils {
   }
 
   static List<double> _colorToHSL(Color color) {
-    final r = color.red / 255.0;
-    final g = color.green / 255.0;
-    final b = color.blue / 255.0;
+    final r = ((color.r * 255.0).round() & 0xff) / 255.0;
+    final g = ((color.g * 255.0).round() & 0xff) / 255.0;
+    final b = ((color.b * 255.0).round() & 0xff) / 255.0;
 
     final max = [r, g, b].reduce((a, b) => a > b ? a : b);
     final min = [r, g, b].reduce((a, b) => a < b ? a : b);
@@ -64,9 +64,9 @@ class ColorUtils {
     ];
 
     return neutralColors.any((neutral) =>
-      (color.red - neutral.red).abs() <= 30 &&
-      (color.green - neutral.green).abs() <= 30 &&
-      (color.blue - neutral.blue).abs() <= 30
+      (((color.r * 255.0).round() & 0xff) - ((neutral.r * 255.0).round() & 0xff)).abs() <= 30 &&
+      (((color.g * 255.0).round() & 0xff) - ((neutral.g * 255.0).round() & 0xff)).abs() <= 30 &&
+      (((color.b * 255.0).round() & 0xff) - ((neutral.b * 255.0).round() & 0xff)).abs() <= 30
     );
   }
 

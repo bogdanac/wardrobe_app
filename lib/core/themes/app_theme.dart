@@ -8,6 +8,7 @@ class AppTheme {
   static const Color primaryBlack = AppColors.primaryBlack;
   static const Color primaryWhite = AppColors.primaryWhite;
   static const Color pastelPink = AppColors.pastelPink;
+  static const Color darkerPink = AppColors.darkerPink;
   static const Color gold = AppColors.gold;
   static const Color lightGray = AppColors.lightGray;
   static const Color mediumGray = AppColors.mediumGray;
@@ -19,7 +20,7 @@ class AppTheme {
   static const Color warning = Colors.orange;
   static const Color info = Colors.blue;
 
-  static ThemeData get lightTheme {
+  static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -150,65 +151,6 @@ class AppTheme {
         ),
         labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      ),
-    );
-  }
-
-  static ThemeData get darkTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      fontFamily: AppTypography.primaryFont,
-      textTheme: _buildTextTheme(Brightness.light),
-      scaffoldBackgroundColor: primaryWhite,
-      colorScheme: const ColorScheme.light(
-        primary: primaryBlack,
-        secondary: pastelPink,
-        tertiary: gold,
-        surface: Colors.white,
-        onPrimary: primaryWhite,
-        onSecondary: primaryBlack,
-        onTertiary: primaryBlack,
-        onSurface: primaryBlack,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: primaryWhite,
-        foregroundColor: primaryBlack,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontFamily: 'Poppins',
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-          color: primaryBlack,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlack,
-          foregroundColor: primaryWhite,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-          ),
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.grey[50],
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.all(8),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: pastelPink,
-        foregroundColor: primaryBlack,
       ),
     );
   }

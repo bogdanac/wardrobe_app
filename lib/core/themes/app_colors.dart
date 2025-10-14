@@ -6,11 +6,12 @@ class AppColors {
   static const Color primaryBlack = Color(0xFF1A1A1A);
   static const Color primaryWhite = Color(0xFFFFFFFF);
   static const Color pastelPink = Color(0xFFFFB3D1);
+  static const Color darkerPink = Color(0xFFE89AB8); // Darker pink for backgrounds
   static const Color gold = Color(0xFFFFD700);
   static const Color lightGray = Color(0xFF2A2A2A);
   static const Color mediumGray = Color(0xFF9E9E9E);
   static const Color darkGray = Color(0xFF424242);
-  
+
   // Extended color palette
   static const Color softMint = Color(0xFF98E4D6);
   static const Color lavender = Color(0xFFB19CD9);
@@ -191,9 +192,9 @@ class AppColors {
   
   // Calculate distance between two colors
   static double _colorDistance(Color c1, Color c2) {
-    final r = c1.red - c2.red;
-    final g = c1.green - c2.green;
-    final b = c1.blue - c2.blue;
+    final r = (c1.r * 255.0).round() - (c2.r * 255.0).round();
+    final g = (c1.g * 255.0).round() - (c2.g * 255.0).round();
+    final b = (c1.b * 255.0).round() - (c2.b * 255.0).round();
     return (r * r + g * g + b * b).toDouble();
   }
 }

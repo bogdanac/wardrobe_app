@@ -1,3 +1,5 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
+
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../domain/entities/clothing_item.dart';
@@ -186,7 +188,12 @@ class WardrobeAnalyticsService {
     for (final outfit in outfits) {
       final outfitColors = <String>{};
       for (final itemId in outfit.clothingItemIds) {
-        final item = clothingItems.firstWhere((item) => item.id == itemId, orElse: () => null);
+        ClothingItem? item;
+        try {
+          item = items.firstWhere((item) => item.id == itemId);
+        } catch (e) {
+          item = null;
+        }
         if (item != null) {
           outfitColors.addAll(item.colors);
         }
@@ -201,7 +208,12 @@ class WardrobeAnalyticsService {
     for (final outfit in outfits) {
       final outfitColors = <String>[];
       for (final itemId in outfit.clothingItemIds) {
-        final item = clothingItems.firstWhere((item) => item.id == itemId, orElse: () => null);
+        ClothingItem? item;
+        try {
+          item = items.firstWhere((item) => item.id == itemId);
+        } catch (e) {
+          item = null;
+        }
         if (item != null) {
           outfitColors.addAll(item.colors);
         }
@@ -226,7 +238,7 @@ class WardrobeAnalyticsService {
       final outfitAppearances = colorOutfitCounts[colorHex] ?? 0;
       final compatibleColors = colorCompatibility[colorHex]?.toList() ?? [];
       
-      final category = _determineColorCategory(percentage.toInt(), outfitAppearances, compatibleColors.length);
+      final category = _determineColorCategory(percentage.round().toDouble(), outfitAppearances, compatibleColors.length);
 
       analysis.add(ColorAnalysis(
         colorHex: colorHex,
@@ -296,16 +308,16 @@ class WardrobeAnalyticsService {
   /// Get expected clothing types for a season
   List<ClothingType> _getExpectedTypesForSeason(Season season) {
     const basicsAllSeasons = [ClothingType.top, ClothingType.bottom, ClothingType.shoes];
-    
+
     switch (season) {
       case Season.spring:
         return [...basicsAllSeasons, ClothingType.outerwear, ClothingType.dress];
       case Season.summer:
-        return [...basicsAllSeasons, ClothingType.dress, ClothingType.swimwear, ClothingType.hat];
+        return [...basicsAllSeasons, ClothingType.dress, ClothingType.swimwear, ClothingType.accessory];
       case Season.autumn:
-        return [...basicsAllSeasons, ClothingType.outerwear, ClothingType.scarf];
+        return [...basicsAllSeasons, ClothingType.outerwear, ClothingType.accessory];
       case Season.winter:
-        return [...basicsAllSeasons, ClothingType.outerwear, ClothingType.scarf, ClothingType.gloves];
+        return [...basicsAllSeasons, ClothingType.outerwear, ClothingType.accessory];
       case Season.allSeason:
         return basicsAllSeasons;
     }
@@ -325,7 +337,7 @@ class WardrobeAnalyticsService {
     
     final unwornItems = items.where((item) => item.wearCount == 0).length;
     if (unwornItems > items.length * 0.3) {
-      recommendations.add('You have ${unwornItems} unworn ${season.name} items to explore');
+      recommendations.add('You have $unwornItems unworn ${season.name} items to explore');
     }
     
     return recommendations;
@@ -388,13 +400,12 @@ class WardrobeAnalyticsService {
       ClothingType.dress: 60.0,
       ClothingType.shoes: 80.0,
       ClothingType.outerwear: 120.0,
-      ClothingType.suit: 200.0,
       ClothingType.accessory: 25.0,
-      ClothingType.jewelry: 40.0,
       ClothingType.bag: 60.0,
-      ClothingType.hat: 30.0,
+      ClothingType.activewear: 40.0,
+      ClothingType.swimwear: 35.0,
     };
-    
+
     return baseCosts[type] ?? 40.0;
   }
 
@@ -403,8 +414,9 @@ class WardrobeAnalyticsService {
     double score = 50; // Base score
     
     // Factor in cost per wear (lower is better)
-    if (avgCostPerWear < 2) score += 20;
-    else if (avgCostPerWear < 5) score += 10;
+    if (avgCostPerWear < 2) {
+      score += 20;
+    } else if (avgCostPerWear < 5) score += 10;
     else if (avgCostPerWear > 20) score -= 20;
     else if (avgCostPerWear > 10) score -= 10;
     
@@ -444,7 +456,7 @@ class WardrobeAnalyticsService {
         description: 'You have $unwornItems items that have never been worn',
         category: SustainabilityCategory.itemUtilization,
         impact: 5,
-        actionItems: ['Try on unworn items this week', 'Create outfits featuring these pieces', 'Consider donating items that don\'t fit'],
+        actionItems: const ['Try on unworn items this week', 'Create outfits featuring these pieces', 'Consider donating items that don\'t fit'],
       ));
     }
     
@@ -479,7 +491,7 @@ class WardrobeAnalyticsService {
           type: RecommendationType.missingBasic,
           priority: 8,
           suggestedItems: _getSuggestedItemsForType(type),
-          colors: ['black', 'white', 'navy', 'gray'],
+          colors: const ['black', 'white', 'navy', 'gray'],
           reasoning: 'Having at least 3-5 ${_getTypeDisplayName(type)} items provides better outfit variety',
         ));
       }
@@ -557,8 +569,8 @@ class WardrobeAnalyticsService {
     final budgetRecommendation = _generateBudgetRecommendation(items, totalSpent);
     
     return CostAnalysis(
-      totalSpent: totalSpent.toDouble(),
-      averageItemCost: averageItemCost,
+      totalSpent: totalSpent,
+      averageItemCost: averageItemCost.toDouble(),
       costByType: costByType,
       mostEfficient: mostEfficient,
       leastEfficient: leastEfficient,
@@ -611,8 +623,8 @@ class WardrobeAnalyticsService {
     const suggestions = {
       Season.spring: ['light jacket', 'cardigan', 'ankle boots'],
       Season.summer: ['sundress', 'shorts', 'sandals'],
-      Season.autumn: ['sweater', 'boots', 'scarf'],
-      Season.winter: ['warm coat', 'gloves', 'winter boots'],
+      Season.autumn: ['sweater', 'boots', 'accessories'],
+      Season.winter: ['warm coat', 'accessories', 'winter boots'],
     };
     return suggestions[season] ?? [];
   }
@@ -646,7 +658,7 @@ class WardrobeAnalyticsService {
       suggestedMonthlyBudget: monthlyBudget,
       priorities: priorities,
       potentialSavings: totalSpent * 0.2, // Estimate 20% potential savings
-      budgetTips: [
+      budgetTips: const [
         'Focus on cost-per-wear rather than initial price',
         'Invest in versatile pieces that work across seasons',
         'Set a monthly wardrobe budget and stick to it',

@@ -111,11 +111,7 @@ class OutfitGeneratorService {
     return [
       ClothingType.outerwear,
       ClothingType.accessory,
-      ClothingType.jewelry,
       ClothingType.bag,
-      ClothingType.hat,
-      ClothingType.scarf,
-      ClothingType.belt,
     ];
   }
 

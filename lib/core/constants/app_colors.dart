@@ -63,12 +63,12 @@ class AppColors {
   }
 
   static double _calculateColorDistance(Color color1, Color color2) {
-    final r1 = color1.red;
-    final g1 = color1.green;
-    final b1 = color1.blue;
-    final r2 = color2.red;
-    final g2 = color2.green;
-    final b2 = color2.blue;
+    final r1 = (color1.r * 255.0).round() & 0xff;
+    final g1 = (color1.g * 255.0).round() & 0xff;
+    final b1 = (color1.b * 255.0).round() & 0xff;
+    final r2 = (color2.r * 255.0).round() & 0xff;
+    final g2 = (color2.g * 255.0).round() & 0xff;
+    final b2 = (color2.b * 255.0).round() & 0xff;
 
     return ((r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2)).toDouble();
   }

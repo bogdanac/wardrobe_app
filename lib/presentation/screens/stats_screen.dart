@@ -173,7 +173,7 @@ class StatsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.bar_chart, color: AppTheme.primaryBlack),
+                const Icon(Icons.bar_chart, color: AppTheme.primaryWhite),
                 const SizedBox(width: 8),
                 Text('Average wear count: ${stats.averageWearCount.toStringAsFixed(1)}'),
               ],
@@ -593,22 +593,13 @@ class StatsScreen extends ConsumerWidget {
     switch (type) {
       case ClothingType.top: return 'Top';
       case ClothingType.bottom: return 'Bottom';
-      case ClothingType.shoes: return 'Shoes';
-      case ClothingType.accessory: return 'Accessory';
-      case ClothingType.outerwear: return 'Outerwear';
-      case ClothingType.undergarment: return 'Undergarment';
-      case ClothingType.jewelry: return 'Jewelry';
-      case ClothingType.bag: return 'Bag';
-      case ClothingType.hat: return 'Hat';
-      case ClothingType.scarf: return 'Scarf';
-      case ClothingType.belt: return 'Belt';
-      case ClothingType.gloves: return 'Gloves';
-      case ClothingType.swimwear: return 'Swimwear';
-      case ClothingType.sleepwear: return 'Sleepwear';
-      case ClothingType.activewear: return 'Activewear';
       case ClothingType.dress: return 'Dress';
-      case ClothingType.jumpsuit: return 'Jumpsuit';
-      case ClothingType.suit: return 'Suit';
+      case ClothingType.shoes: return 'Shoes';
+      case ClothingType.bag: return 'Bag';
+      case ClothingType.accessory: return 'Accessory';
+      case ClothingType.outerwear: return 'Coat';
+      case ClothingType.activewear: return 'Activewear';
+      case ClothingType.swimwear: return 'Swimwear';
     }
   }
 
@@ -629,19 +620,10 @@ class StatsScreen extends ConsumerWidget {
       case ClothingType.shoes: return Icons.directions_walk;
       case ClothingType.accessory: return Icons.diamond;
       case ClothingType.outerwear: return Icons.checkroom;
-      case ClothingType.undergarment: return Icons.checkroom;
-      case ClothingType.jewelry: return Icons.diamond;
       case ClothingType.bag: return Icons.work_outline;
-      case ClothingType.hat: return Icons.face;
-      case ClothingType.scarf: return Icons.checkroom;
-      case ClothingType.belt: return Icons.circle_outlined;
-      case ClothingType.gloves: return Icons.back_hand;
       case ClothingType.swimwear: return Icons.pool;
-      case ClothingType.sleepwear: return Icons.bedtime;
       case ClothingType.activewear: return Icons.fitness_center;
       case ClothingType.dress: return Icons.checkroom;
-      case ClothingType.jumpsuit: return Icons.checkroom;
-      case ClothingType.suit: return Icons.checkroom;
     }
   }
 

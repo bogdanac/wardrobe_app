@@ -131,7 +131,20 @@ class ClothingRepositoryImpl implements ClothingRepository {
   @override
   Future<void> updateClothingItem(ClothingItem item) async {
     final isar = await _databaseService.isar;
+
+    // Find existing item by UUID to preserve isarId
+    final existingModel = await isar.clothingItemModels
+        .filter()
+        .idEqualTo(item.id)
+        .findFirst();
+
     final model = ClothingItemModel.fromEntity(item);
+
+    // Preserve the isarId if item exists
+    if (existingModel != null) {
+      model.isarId = existingModel.isarId;
+    }
+
     await isar.writeTxn(() async {
       await isar.clothingItemModels.put(model);
     });

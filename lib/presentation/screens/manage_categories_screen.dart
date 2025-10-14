@@ -63,6 +63,94 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     await prefs.setStringList(_customCategoriesKey, _categories);
   }
 
+  void _showAddCategoryDialog() {
+    final controller = TextEditingController();
+    Color selectedColor = _getColorOptions().first;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Category Name',
+                  hintText: 'Enter category name',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Color',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _getColorOptions().map((color) {
+                  final isSelected = selectedColor == color;
+                  return GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selectedColor = color;
+                      });
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.black : Colors.grey.shade300,
+                          width: isSelected ? 3 : 1,
+                        ),
+                      ),
+                      child: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 16,
+                            )
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final categoryName = controller.text.trim();
+                if (categoryName.isNotEmpty && !_categories.contains(categoryName)) {
+                  await _updateCategoryColor(categoryName, selectedColor);
+                  setState(() {
+                    _categories.add(categoryName);
+                  });
+                  await _saveCustomCategories();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _addCategory() {
     final categoryName = _newCategoryController.text.trim();
     if (categoryName.isNotEmpty && !_categories.contains(categoryName)) {
@@ -120,10 +208,10 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     }
   }
 
-  void _editCategory(String oldCategory) {
+  Future<void> _editCategory(String oldCategory) async {
     final controller = TextEditingController(text: oldCategory);
     Color selectedColor = CategoryColors.getCategoryColor(oldCategory);
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -187,27 +275,64 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty && newName != oldCategory) {
                   if (!_categories.contains(newName)) {
+                    // Update category name in all clothing items
+                    final clothingRepository = ref.read(clothingRepositoryProvider);
+                    final allClothingItems = await clothingRepository.getAllClothingItems();
+
+                    for (final item in allClothingItems) {
+                      if (item.categories.contains(oldCategory)) {
+                        final updatedCategories = item.categories.map((c) => c == oldCategory ? newName : c).toList();
+                        final updatedItem = item.copyWith(categories: updatedCategories);
+                        await clothingRepository.updateClothingItem(updatedItem);
+                      }
+                    }
+
+                    // Update category name in all outfits
+                    final outfitRepository = ref.read(outfitRepositoryProvider);
+                    final allOutfits = await outfitRepository.getAllOutfits();
+
+                    for (final outfit in allOutfits) {
+                      if (outfit.categories.contains(oldCategory)) {
+                        final updatedCategories = outfit.categories.map((c) => c == oldCategory ? newName : c).toList();
+                        final updatedOutfit = outfit.copyWith(categories: updatedCategories);
+                        await outfitRepository.updateOutfit(updatedOutfit);
+                      }
+                    }
+
+                    // Store the color selection
+                    await _updateCategoryColor(newName, selectedColor);
+
                     setState(() {
                       final index = _categories.indexOf(oldCategory);
                       if (index != -1) {
                         _categories[index] = newName;
                       }
-                      // Store the color selection (we'll handle this with the color utility)
-                      _updateCategoryColor(newName, selectedColor);
                     });
-                    _saveCustomCategories();
-                    Navigator.pop(context);
+                    await _saveCustomCategories();
+
+                    // Invalidate providers to refresh UI
+                    ref.invalidate(allClothingItemsProvider);
+                    ref.invalidate(allOutfitsProvider);
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   } else {
-                    Navigator.pop(context);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   }
                 } else if (newName == oldCategory) {
                   // Just update color if name didn't change
-                  _updateCategoryColor(oldCategory, selectedColor);
-                  Navigator.pop(context);
+                  await _updateCategoryColor(oldCategory, selectedColor);
+                  setState(() {}); // Refresh UI to show color change
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               child: const Text('Save'),
@@ -295,7 +420,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Style Categories',
+                            'Style',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -315,7 +440,19 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                       
                       if (_getAllCategories().isNotEmpty)
                         Card(
-                          child: Column(
+                          child: ReorderableListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            onReorder: (oldIndex, newIndex) {
+                              setState(() {
+                                if (newIndex > oldIndex) {
+                                  newIndex -= 1;
+                                }
+                                final category = _categories.removeAt(oldIndex);
+                                _categories.insert(newIndex, category);
+                              });
+                              _saveCustomCategories();
+                            },
                             children: _getAllCategories().map((category) {
                               return Dismissible(
                                 key: Key(category),
@@ -343,6 +480,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                                     Icons.label,
                                     color: CategoryColors.getCategoryColor(category),
                                   ),
+                                  trailing: const Icon(Icons.drag_handle),
                                   onTap: () => _editCategory(category),
                                 ),
                               );
@@ -388,37 +526,33 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                 ),
               ],
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddCategoryDialog,
+        backgroundColor: AppTheme.pastelPink,
+        foregroundColor: AppTheme.primaryBlack,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
   List<Color> _getColorOptions() {
     return [
-      const Color(0xFFFF4081), // Pink
-      const Color(0xFFBA68C8), // Purple
-      const Color(0xFF00ACC1), // Cyan
-      const Color(0xFF5C6BC0), // Indigo
-      const Color(0xFFFF7043), // Deep Orange
-      const Color(0xFF66BB6A), // Green
-      const Color(0xFFFFC107), // Amber
-      const Color(0xFFEC407A), // Pink Accent
-      const Color(0xFF8D6E63), // Brown
-      const Color(0xFF2196F3), // Blue
-      const Color(0xFF4CAF50), // Light Green
-      const Color(0xFFFF5722), // Deep Orange Red
-      const Color(0xFF9C27B0), // Purple
       const Color(0xFFF44336), // Red
-      const Color(0xFF00BCD4), // Cyan
-      const Color(0xFF009688), // Teal
-      const Color(0xFFFFEB3B), // Yellow
-      const Color(0xFF673AB7), // Deep Purple
-      const Color(0xFF3F51B5), // Indigo
+      const Color(0xFFFF4081), // Pink
+      const Color(0xFFFF7043), // Deep Orange
+      const Color(0xFFFFC107), // Amber
+      const Color(0xFF66BB6A), // Green
+      const Color(0xE83CB88C), // Turquoise
+      const Color(0xFF00ACC1), // Blue
+      const Color(0xFF5C6BC0), // Indigo
+      const Color(0xFFBA68C8), // Purple
+      const Color(0xFFAA6E4B), // Brown
+      const Color(0xFF3A3A3A) // Black
     ];
   }
 
-  void _updateCategoryColor(String category, Color color) {
-    // This would ideally be stored in SharedPreferences or a database
-    // For now, CategoryColors.getCategoryColor will handle it
-    // In a full implementation, you'd save custom colors separately
+  Future<void> _updateCategoryColor(String category, Color color) async {
+    await CategoryColors.setCategoryColor(category, color);
   }
 
   void _showInfoDialog() {

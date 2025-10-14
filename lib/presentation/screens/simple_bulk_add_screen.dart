@@ -9,7 +9,9 @@ import '../../domain/entities/clothing_item.dart';
 import 'package:uuid/uuid.dart';
 
 class SimpleBulkAddScreen extends ConsumerStatefulWidget {
-  const SimpleBulkAddScreen({super.key});
+  final List<File>? preSelectedImages;
+
+  const SimpleBulkAddScreen({super.key, this.preSelectedImages});
 
   @override
   ConsumerState<SimpleBulkAddScreen> createState() => _SimpleBulkAddScreenState();
@@ -18,18 +20,34 @@ class SimpleBulkAddScreen extends ConsumerStatefulWidget {
 class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
   final ImageService _imageService = ImageService();
   final _uuid = const Uuid();
-  
+
   List<File> _selectedImages = [];
   bool _isProcessing = false;
   int _currentProcessing = 0;
   int _successCount = 0;
   int _errorCount = 0;
 
+  // Bulk settings
+  ClothingType _selectedClothingType = ClothingType.top;
+  Season? _selectedSeason;
+  bool _showBulkSettings = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If we have pre-selected images, use them
+    if (widget.preSelectedImages != null && widget.preSelectedImages!.isNotEmpty) {
+      _selectedImages = List.from(widget.preSelectedImages!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quick Add Multiple Items'),
+        title: Text(widget.preSelectedImages != null
+            ? 'Shared Images (${_selectedImages.length})'
+            : 'Quick Add Multiple Items'),
         backgroundColor: AppTheme.primaryBlack,
         foregroundColor: AppTheme.primaryWhite,
       ),
@@ -168,16 +186,31 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           color: AppTheme.lightGray,
-          child: Row(
+          child: Column(
             children: [
-              const Icon(Icons.info_outline, color: AppTheme.pastelPink, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${_selectedImages.length} images selected. Tap "Quick Add" to process all automatically.',
-                  style: const TextStyle(color: AppTheme.primaryWhite, fontSize: 14),
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppTheme.pastelPink, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_selectedImages.length} images selected. Set bulk options below.',
+                      style: const TextStyle(color: AppTheme.primaryWhite, fontSize: 14),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _showBulkSettings ? Icons.expand_less : Icons.expand_more,
+                      color: AppTheme.primaryWhite,
+                    ),
+                    onPressed: () => setState(() => _showBulkSettings = !_showBulkSettings),
+                  ),
+                ],
               ),
+              if (_showBulkSettings) ...[
+                const SizedBox(height: 16),
+                _buildBulkSettings(),
+              ],
             ],
           ),
         ),
@@ -332,12 +365,12 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
         final item = ClothingItem(
           id: _uuid.v4(),
           name: 'Item ${DateTime.now().millisecondsSinceEpoch}',
-          type: _getSmartClothingType(colors), // Smart guess based on colors/size
+          type: _selectedClothingType,
           imagePath: imagePath,
           colors: colors.map((color) => _imageService.colorToHex(color)).toList(),
-          categories: const ['unassigned'], // Default category
-          season: null, // User can set later
-          weatherRanges: const [], // User can set later
+          categories: const [],
+          season: _selectedSeason,
+          weatherRanges: const [],
           wearCount: 0,
           lastWornDate: null,
           createdAt: DateTime.now(),
@@ -368,10 +401,149 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
     });
   }
 
-  ClothingType _getSmartClothingType(List<Color> colors) {
-    // Simple heuristic - you could make this smarter
-    // For now, default to tops since they're most common
-    return ClothingType.top;
+  Widget _buildBulkSettings() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlack,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Bulk Settings',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryWhite,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Clothing Type
+          const Text(
+            'Clothing Type',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.primaryWhite,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.mediumGray),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<ClothingType>(
+                value: _selectedClothingType,
+                isExpanded: true,
+                dropdownColor: AppTheme.lightGray,
+                style: const TextStyle(color: AppTheme.primaryWhite),
+                items: ClothingType.values.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(_getClothingTypeDisplayName(type)),
+                  );
+                }).toList(),
+                onChanged: (ClothingType? value) {
+                  if (value != null) {
+                    setState(() => _selectedClothingType = value);
+                  }
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Season
+          const Text(
+            'Season (Optional)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.primaryWhite,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.mediumGray),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<Season?>(
+                value: _selectedSeason,
+                isExpanded: true,
+                dropdownColor: AppTheme.lightGray,
+                style: const TextStyle(color: AppTheme.primaryWhite),
+                items: [
+                  const DropdownMenuItem<Season?>(
+                    value: null,
+                    child: Text('No season'),
+                  ),
+                  ...Season.values.map((season) {
+                    return DropdownMenuItem<Season?>(
+                      value: season,
+                      child: Text(_getSeasonDisplayName(season)),
+                    );
+                  }),
+                ],
+                onChanged: (Season? value) {
+                  setState(() => _selectedSeason = value);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getClothingTypeDisplayName(ClothingType type) {
+    switch (type) {
+      case ClothingType.top:
+        return 'Top';
+      case ClothingType.bottom:
+        return 'Bottom';
+      case ClothingType.shoes:
+        return 'Shoes';
+      case ClothingType.accessory:
+        return 'Accessory';
+      case ClothingType.outerwear:
+        return 'Outerwear';
+      case ClothingType.bag:
+        return 'Bag';
+      case ClothingType.swimwear:
+        return 'Swimwear';
+      case ClothingType.activewear:
+        return 'Activewear';
+      case ClothingType.dress:
+        return 'Dress';
+    }
+  }
+
+  String _getSeasonDisplayName(Season season) {
+    switch (season) {
+      case Season.spring:
+        return 'Spring';
+      case Season.summer:
+        return 'Summer';
+      case Season.autumn:
+        return 'Autumn';
+      case Season.winter:
+        return 'Winter';
+      case Season.allSeason:
+        return 'All Season';
+    }
   }
 
   void _showErrorSnackBar(String message) {

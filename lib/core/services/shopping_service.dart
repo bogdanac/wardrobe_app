@@ -1,15 +1,13 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 // import 'package:url_launcher/url_launcher.dart'; // Commented out until dependency is added
+import 'package:flutter/foundation.dart';
+
 import '../../domain/entities/shopping_models.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
 
 class ShoppingService {
   // Shopping integration APIs (these would need real API keys)
-  static const String _amazonApiKey = 'YOUR_AMAZON_API_KEY';
-  static const String _shopifyApiKey = 'YOUR_SHOPIFY_API_KEY';
-  
+
   // Analyze wardrobe gaps and suggest purchases
   Future<List<ShoppingSuggestion>> analyzeWardrobeGaps(
     List<ClothingItem> currentWardrobe,
@@ -204,11 +202,13 @@ class ShoppingService {
   // Launch shopping URL - commented out until url_launcher dependency is added
   Future<void> openShoppingUrl(String url) async {
     try {
-      final uri = Uri.parse(url);
+      Uri.parse(url);
       // if (await canLaunchUrl(uri)) {
       //   await launchUrl(uri, mode: LaunchMode.externalApplication);
       // }
-      print('Would launch URL: $url');
+      if (kDebugMode) {
+        print('Would launch URL: $url');
+      }
     } catch (e) {
       throw Exception('Failed to prepare shopping URL: $e');
     }
@@ -222,15 +222,7 @@ class ShoppingService {
     String? notes,
   }) async {
     try {
-      final purchase = PurchaseRecord()
-        ..itemName = item.itemName
-        ..category = item.category
-        ..actualPrice = actualPrice
-        ..estimatedPrice = item.estimatedPrice
-        ..store = store
-        ..purchaseDate = DateTime.now()
-        ..notes = notes;
-      
+
       // Save purchase record
       // This would integrate with your local storage
       
@@ -319,23 +311,24 @@ class ShoppingService {
 
   List<ShoppingSuggestion> _analyzeReplacementNeeds(List<ClothingItem> wardrobe) {
     final suggestions = <ShoppingSuggestion>[];
-    
+
     for (final item in wardrobe) {
       // Check if item needs replacement based on age or usage
       final daysSinceAdded = DateTime.now().difference(item.createdAt).inDays;
-      
-      if (daysSinceAdded > 365 && item.type == ClothingType.undergarment) {
+
+      // Suggest replacement for items over a year old with high wear count
+      if (daysSinceAdded > 365 && item.wearCount > 50) {
         suggestions.add(ShoppingSuggestion()
           ..itemName = 'Replace ${item.name}'
           ..category = item.categories.isNotEmpty ? item.categories.first : 'general'
-          ..reason = 'Item may need replacement due to age'
+          ..reason = 'Item may need replacement due to age and frequent use'
           ..priority = 2
           ..estimatedPrice = _getEstimatedPrice(item.type)
           ..clothingType = item.type
           ..createdAt = DateTime.now());
       }
     }
-    
+
     return suggestions;
   }
 

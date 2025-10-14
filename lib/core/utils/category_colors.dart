@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CategoryColors {
+  static const String _customColorsKey = 'custom_category_colors';
+  static Map<String, Color>? _customColors;
+
   static const Map<String, Color> _predefinedColors = {
     'brunch with the girls': Color(0xFFFF4081),
     'period safe': Color(0xFFBA68C8),
@@ -26,12 +30,65 @@ class CategoryColors {
     Color(0xFF3F51B5), // Indigo
   ];
 
-  static Color getCategoryColor(String category) {
+  static Future<void> _loadCustomColors() async {
+    if (_customColors != null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final colorMap = prefs.getStringList(_customColorsKey) ?? [];
+
+    _customColors = {};
+    for (final entry in colorMap) {
+      final parts = entry.split(':');
+      if (parts.length == 2) {
+        final category = parts[0];
+        final colorValue = int.tryParse(parts[1]);
+        if (colorValue != null) {
+          _customColors![category] = Color(colorValue);
+        }
+      }
+    }
+  }
+
+  static Future<void> setCategoryColor(String category, Color color) async {
+    await _loadCustomColors();
+    _customColors![category] = color;
+
+    final prefs = await SharedPreferences.getInstance();
+    final colorMap = _customColors!.entries
+        .map((e) => '${e.key}:${e.value.value}')
+        .toList();
+    await prefs.setStringList(_customColorsKey, colorMap);
+  }
+
+  static Future<Color> getCategoryColorAsync(String category) async {
+    await _loadCustomColors();
+
+    // Check custom colors first
+    if (_customColors!.containsKey(category)) {
+      return _customColors![category]!;
+    }
+
     // Check if it's a predefined category with a specific color
     if (_predefinedColors.containsKey(category)) {
       return _predefinedColors[category]!;
     }
-    
+
+    // Generate a color based on the category name hash for consistent colors
+    final hash = category.hashCode;
+    return _fallbackColors[hash.abs() % _fallbackColors.length];
+  }
+
+  static Color getCategoryColor(String category) {
+    // Check custom colors first (if already loaded)
+    if (_customColors?.containsKey(category) == true) {
+      return _customColors![category]!;
+    }
+
+    // Check if it's a predefined category with a specific color
+    if (_predefinedColors.containsKey(category)) {
+      return _predefinedColors[category]!;
+    }
+
     // Generate a color based on the category name hash for consistent colors
     final hash = category.hashCode;
     return _fallbackColors[hash.abs() % _fallbackColors.length];

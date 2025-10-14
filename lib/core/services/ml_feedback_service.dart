@@ -41,6 +41,44 @@ class MLFeedbackService {
     });
 
     await _updatePreferences(feedback);
+    
+    // Record contextual information for enhanced learning
+    await _recordContextualData(feedback);
+  }
+
+  /// Record contextual data for enhanced learning
+  Future<void> _recordContextualData(UserFeedback feedback) async {
+    try {
+      final now = DateTime.now();
+      final contextData = {
+        'hour_of_day': now.hour,
+        'day_of_week': now.weekday,
+        'season': _getCurrentSeason(),
+        'feedback_type': feedback.type.name,
+        'context': feedback.context.name,
+      };
+
+      // Add weather data if available (would integrate with weather API)
+      if (feedback.metadata['temperature'] != null) {
+        contextData['temperature'] = feedback.metadata['temperature'];
+      }
+      if (feedback.metadata['weather_condition'] != null) {
+        contextData['weather_condition'] = feedback.metadata['weather_condition'];
+      }
+
+      // Store in metadata for future analysis
+      feedback.metadata.addAll(contextData);
+    } catch (e) {
+      // Continue without contextual data if recording fails
+    }
+  }
+
+  String _getCurrentSeason() {
+    final month = DateTime.now().month;
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'autumn';
+    return 'winter';
   }
 
   Future<void> _updatePreferences(UserFeedback feedback) async {

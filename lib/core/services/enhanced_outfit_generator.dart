@@ -211,17 +211,15 @@ class EnhancedOutfitGenerator {
   List<ClothingType> _getOptionalTypesForContext(Season? season, String? occasion) {
     final optional = <ClothingType>[
       ClothingType.accessory,
-      ClothingType.jewelry,
       ClothingType.bag,
-      ClothingType.hat,
-      ClothingType.scarf,
     ];
 
-    // Season-specific additions
-    if (season == Season.summer) {
-      optional.add(ClothingType.hat);
-    } else if (season == Season.winter) {
-      optional.addAll([ClothingType.scarf, ClothingType.gloves]);
+    // Season-specific additions - accessories cover hats, scarves, gloves, etc.
+    if (season == Season.summer || season == Season.winter) {
+      // Ensure accessory is in the list for seasonal accessories
+      if (!optional.contains(ClothingType.accessory)) {
+        optional.add(ClothingType.accessory);
+      }
     }
 
     return optional;
@@ -332,17 +330,17 @@ class EnhancedOutfitGenerator {
   /// Calculate season appropriateness score
   double _calculateSeasonScore(ClothingItem item, Season season) {
     if (item.season == null) return 0;
-    
+
     if (item.season == season || item.season == Season.allSeason) {
       return 3;
     }
-    
+
     // Partial matches for transitional seasons
     if ((season == Season.spring && item.season == Season.summer) ||
         (season == Season.autumn && item.season == Season.winter)) {
       return 1;
     }
-    
+
     return -2; // Penalize inappropriate seasons
   }
 
@@ -421,17 +419,14 @@ class EnhancedOutfitGenerator {
     // Don't add too many accessories
     final accessoryTypes = {
       ClothingType.accessory,
-      ClothingType.jewelry,
       ClothingType.bag,
-      ClothingType.hat,
-      ClothingType.scarf,
     };
-    
+
     final existingAccessories = existingItems.where((item) => accessoryTypes.contains(item.type)).length;
     if (accessoryTypes.contains(newItem.type) && existingAccessories >= 2) {
       return false;
     }
-    
+
     return true;
   }
 

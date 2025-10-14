@@ -5,6 +5,7 @@ import 'dart:io';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/services/image_service.dart';
+import '../../core/services/color_palette_service.dart';
 import '../../core/errors/error_handler.dart';
 import '../../core/utils/loading_state.dart';
 import '../providers/clothing_provider.dart';
@@ -31,6 +32,7 @@ class AddClothingItemScreen extends ConsumerStatefulWidget {
 class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _imageService = ImageService();
+  final _colorService = ColorPaletteService();
   final _uuid = const Uuid();
 
   ClothingType _selectedType = ClothingType.top;
@@ -38,8 +40,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   List<WeatherRange> _selectedWeatherRanges = [];
   List<String> _selectedCategories = [];
   List<Color> _detectedColors = [];
-  List<Color?> _selectedColors = [null, null, null]; // [primary, secondary, accent]
+  final List<Color?> _selectedColors = [null, null, null]; // [primary, secondary, accent]
   List<File> _selectedImages = [];
+  File? _originalImage; // Keep original image for re-processing
   final List<File> _additionalImages = []; // Additional images without background removal
   List<Map<String, dynamic>> _processedImages = []; // {file: File, colors: List<Color>}
   MetallicElements _selectedMetallicElements = MetallicElements.none;
@@ -47,12 +50,14 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   bool _isMultiMode = false;
   LoadingState _loadingState = LoadingState.hidden;
   final ErrorHandler _errorHandler = ErrorHandler();
+  List<Map<String, String>> _paletteColors = [];
 
 
   @override
   void initState() {
     super.initState();
-    
+    _loadPaletteColors();
+
     // Handle initial image from bulk add
     if (widget.initialImage != null) {
       _selectedImages = [widget.initialImage!];
@@ -62,10 +67,17 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       }];
       _detectedColors = widget.initialColors ?? [];
     }
-    
+
     if (widget.item != null) {
       _initializeWithExistingItem();
     }
+  }
+
+  Future<void> _loadPaletteColors() async {
+    final colors = await _colorService.getColors();
+    setState(() {
+      _paletteColors = colors;
+    });
   }
 
   void _initializeWithExistingItem() {
@@ -110,24 +122,85 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       appBar: AppBar(
         title: Text(widget.item == null ? 'Add Item' : 'Edit Item'),
         actions: [
-          if (widget.item != null && !widget.item!.isArchived) ...[
-            IconButton(
-              onPressed: _isProcessing ? null : _showDeleteDialog,
-              icon: Icon(
-                Icons.delete_outline,
-                color: _isProcessing ? AppTheme.mediumGray : Colors.red,
-              ),
-              tooltip: 'Delete Item',
+          if (_selectedImages.isNotEmpty || widget.item?.imagePath != null)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              enabled: !_isProcessing,
+              onSelected: (value) {
+                switch (value) {
+                  case 'remove_bg':
+                    _reprocessBackgroundRemoval();
+                    break;
+                  case 'replace_image':
+                    _showImagePickerOptions();
+                    break;
+                  case 'add_images':
+                    _pickAdditionalImages();
+                    break;
+                  case 'delete':
+                    if (widget.item != null) _showDeleteDialog();
+                    break;
+                  case 'archive':
+                    if (widget.item != null) _showArchiveDialog();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'replace_image',
+                  child: Row(
+                    children: [
+                      Icon(Icons.photo_camera, color: AppTheme.pastelPink),
+                      SizedBox(width: 12),
+                      Text('Replace Image'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'remove_bg',
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_fix_high, color: AppTheme.info),
+                      SizedBox(width: 12),
+                      Text('Remove Background'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'add_images',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_photo_alternate, color: AppTheme.info),
+                      SizedBox(width: 12),
+                      Text('Add More Images'),
+                    ],
+                  ),
+                ),
+                if (widget.item != null && !widget.item!.isArchived) ...[
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: Row(
+                      children: [
+                        Icon(Icons.archive_outlined, color: Colors.orange),
+                        SizedBox(width: 12),
+                        Text('Archive Item'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text('Delete Item'),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
-            IconButton(
-              onPressed: _isProcessing ? null : _showArchiveDialog,
-              icon: Icon(
-                Icons.archive_outlined,
-                color: _isProcessing ? AppTheme.mediumGray : Colors.orange,
-              ),
-              tooltip: 'Archive Item',
-            ),
-          ],
           TextButton(
             onPressed: _isProcessing ? null : _saveItem,
             child: Text(
@@ -149,10 +222,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             const SizedBox(height: 24),
             _buildClothingTypeSection(),
             const SizedBox(height: 24),
-            _buildMultiModeToggle(),
-            const SizedBox(height: 24),
             UnifiedFilters(
-              showCategories: true,
+              showCategories: false,
               showSeasons: true,
               showWeather: true,
               showColors: false,
@@ -196,10 +267,38 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                 });
               },
             ),
+            const SizedBox(height: 16),
+            _buildColorSection(),
             const SizedBox(height: 24),
             _buildMetallicElementsSection(),
             const SizedBox(height: 24),
-            _buildColorSection(),
+            UnifiedFilters(
+              showCategories: true,
+              showSeasons: false,
+              showWeather: false,
+              showColors: false,
+              showClothingTypes: false,
+              showFavorites: false,
+              showMetallicElements: false,
+              selectedCategories: _selectedCategories,
+              selectedSeason: _selectedSeason,
+              selectedWeatherRanges: _selectedWeatherRanges,
+              selectedColors: const [],
+              selectedTypes: [_selectedType],
+              selectedFavorites: null,
+              selectedMetallicElements: _selectedMetallicElements,
+              onCategoriesChanged: (categories) {
+                setState(() {
+                  _selectedCategories = categories;
+                });
+              },
+              onSeasonChanged: (season) {},
+              onWeatherChanged: (ranges) {},
+              onColorsChanged: (colors) {},
+              onTypesChanged: (types) {},
+              onFavoritesChanged: (favorites) {},
+              onMetallicElementsChanged: (elements) {},
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -211,17 +310,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _isMultiMode ? 'Photos' : 'Photo',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
         if (_isMultiMode) _buildMultiImageSection() else _buildSingleImageSection(),
-        const SizedBox(height: 16),
-        _buildAdditionalPhotosSection(),
         if (_loadingState.isVisible)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -235,8 +324,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   }
 
   Widget _buildSingleImageSection() {
-    final hasImage = _selectedImages.isNotEmpty || widget.item?.imagePath != null;
-    
+
     return Column(
       children: [
         GestureDetector(
@@ -295,19 +383,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                       ),
           ),
         ),
-        if (hasImage)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: OutlinedButton.icon(
-              onPressed: _isProcessing ? null : _showImagePickerOptions,
-              icon: const Icon(Icons.photo_camera),
-              label: const Text('Replace Image'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.pastelPink,
-                side: const BorderSide(color: AppTheme.pastelPink),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -405,36 +480,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     );
   }
 
-  Widget _buildMultiModeToggle() {
-    return Row(
-      children: [
-        const Text(
-          'Add multiple items',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const Spacer(),
-        Switch(
-          value: _isMultiMode,
-          onChanged: (value) {
-            setState(() {
-              _isMultiMode = value;
-              if (!value) {
-                // Keep only the first image when switching to single mode
-                if (_selectedImages.length > 1) {
-                  _selectedImages = [_selectedImages.first];
-                  _processedImages = _processedImages.take(1).toList();
-                }
-              }
-            });
-          },
-          activeThumbColor: AppTheme.pastelPink,
-        ),
-      ],
-    );
-  }
 
 
 
@@ -442,14 +487,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Metallic Elements',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
         Wrap(
           spacing: 4,
           runSpacing: 4,
@@ -472,131 +509,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     );
   }
 
-  Widget _buildAdditionalPhotosSection() {
-    final hasAdditionalImages = _additionalImages.isNotEmpty || (widget.item?.additionalImages.isNotEmpty ?? false);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Text(
-              'Additional Photos',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryWhite,
-              ),
-            ),
-            SizedBox(width: 8),
-            Text(
-              '(optional - details, tags, styling)',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.mediumGray,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        
-        if (hasAdditionalImages)
-          _buildAdditionalImagesGrid()
-        else
-          Container(
-            height: 60,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppTheme.lightGray.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.photo_library_outlined,
-                  size: 20,
-                  color: AppTheme.mediumGray,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'Add detail photos (no background removal)',
-                  style: TextStyle(
-                    color: AppTheme.mediumGray,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _isProcessing ? null : _pickAdditionalImages,
-          icon: const Icon(Icons.add_photo_alternate),
-          label: Text(_additionalImages.isEmpty ? 'Add Detail Photos' : 'Add More Photos'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.primaryWhite,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildAdditionalImagesGrid() {
-    final allAdditionalImages = [
-      ..._additionalImages,
-      ...?widget.item?.additionalImages.map((path) => File(path)),
-    ];
-    
-    return SizedBox(
-      height: 80,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: allAdditionalImages.length,
-        itemBuilder: (context, index) {
-          final image = allAdditionalImages[index];
-          return Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    image,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => _removeAdditionalImage(index),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildColorSection() {
     return Column(
@@ -609,15 +522,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(width: 8),
-            Text(
-              '(tap to change or add)',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.mediumGray,
-                fontStyle: FontStyle.italic,
               ),
             ),
           ],
@@ -637,28 +541,24 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                         color: _selectedColors[i] ?? Colors.grey.shade200,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: i == 0 && _selectedColors[i] == null
-                              ? Colors.red.shade300
-                              : Colors.grey.shade300,
-                          width: i == 0 && _selectedColors[i] == null ? 2 : 1,
+                          color: Colors.grey.shade300,
+                          width: 1,
                         ),
                       ),
                       child: _selectedColors[i] == null
                           ? Icon(
                               i == 0 ? Icons.palette : Icons.add,
-                              color: i == 0 ? Colors.red.shade300 : Colors.grey.shade400,
+                              color: Colors.grey.shade400,
                               size: 24,
                             )
                           : null,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      i == 0 ? 'Primary*' : i == 1 ? 'Secondary' : 'Accent',
+                      i == 0 ? 'Primary' : i == 1 ? 'Secondary' : 'Accent',
                       style: TextStyle(
                         fontSize: 10,
-                        color: i == 0 && _selectedColors[i] == null
-                            ? Colors.red.shade300
-                            : AppTheme.mediumGray,
+                        color: AppTheme.mediumGray,
                         fontWeight: i == 0 ? FontWeight.w500 : FontWeight.normal,
                       ),
                     ),
@@ -759,6 +659,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     try {
       final image = await _imageService.pickImageFromCamera();
       if (image != null) {
+        _originalImage = image; // Save original
         _selectedImages = [image];
         await _processImages();
       }
@@ -784,6 +685,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     try {
       final image = await _imageService.pickImageFromGallery();
       if (image != null) {
+        _originalImage = image; // Save original
         _selectedImages = [image];
         await _processImages();
       }
@@ -872,6 +774,91 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     });
   }
 
+  Future<void> _reprocessBackgroundRemoval() async {
+    if (_originalImage == null && _selectedImages.isEmpty && widget.item?.imagePath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No image to process')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _loadingState = const LoadingState(
+        type: LoadingType.processing,
+        message: 'Removing background...',
+      );
+    });
+
+    try {
+      File imageToProcess;
+
+      // Use the original image if available, otherwise fall back to current image
+      if (_originalImage != null) {
+        imageToProcess = _originalImage!;
+      } else if (_selectedImages.isNotEmpty) {
+        imageToProcess = _selectedImages.first;
+      } else if (widget.item?.imagePath != null) {
+        imageToProcess = File(widget.item!.imagePath!);
+      } else {
+        throw Exception('No image available');
+      }
+
+      // Remove background again
+      final processedImage = await _imageService.removeBackground(imageToProcess);
+
+      // Extract colors from the new processed image
+      final colors = await _imageService.extractColors(processedImage, maxColors: 3);
+
+      setState(() {
+        _selectedImages = [processedImage];
+        _processedImages = [{
+          'file': processedImage,
+          'colors': colors,
+        }];
+
+        // Update detected colors
+        _detectedColors = colors.take(1).toList();
+        if (colors.isNotEmpty) {
+          _selectedColors[0] = colors.first;
+        }
+
+        _isProcessing = false;
+        _loadingState = const LoadingState(
+          type: LoadingType.processing,
+          message: 'Background removed successfully!',
+        );
+      });
+
+      // Hide success message after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _loadingState = LoadingState(
+          type: LoadingType.processing,
+          message: 'Failed to remove background: ${e.toString()}',
+        );
+      });
+
+      // Hide error message after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+    }
+  }
+
   Future<void> _pickAdditionalImages() async {
     try {
       final images = await _imageService.pickMultipleImagesFromGallery();
@@ -885,13 +872,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     }
   }
 
-  void _removeAdditionalImage(int index) {
-    setState(() {
-      if (index < _additionalImages.length) {
-        _additionalImages.removeAt(index);
-      }
-    });
-  }
 
   Future<void> _saveItem() async {
 
@@ -928,8 +908,10 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
             notes: null,
-            tags: [],
+            tags: const [],
             metallicElements: _selectedMetallicElements,
+            sizeFit: SizeFit.perfect,
+            isArchived: false,
           );
           
           itemsToSave.add(item);
@@ -982,15 +964,14 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
           createdAt: widget.item?.createdAt ?? DateTime.now(),
           updatedAt: DateTime.now(),
           notes: null,
-          tags: [],
+          tags: widget.item?.tags ?? const [],
           metallicElements: _selectedMetallicElements,
+          sizeFit: widget.item?.sizeFit ?? SizeFit.perfect,
+          isArchived: widget.item?.isArchived ?? false,
         );
 
-        if (widget.item == null) {
-          await repository.saveClothingItem(item);
-        } else {
-          await repository.updateClothingItem(item);
-        }
+        // Always use updateClothingItem since it handles both insert and update
+        await repository.updateClothingItem(item);
 
         if (mounted) {
           Navigator.pop(context, true); // Return success for bulk add
@@ -1005,7 +986,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
 
       ref.invalidate(allClothingItemsProvider);
       ref.invalidate(filteredClothingItemsProvider);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error saving item: $e');
+      print('Stack trace: $stackTrace');
       _handleError(e, 'saving clothing item');
     } finally {
       setState(() {
@@ -1115,110 +1098,19 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Select the type that best describes this clothing item.',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppTheme.mediumGray,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.lightGray.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppTheme.pastelPink.withValues(alpha: 0.5),
-              width: 2,
-            ),
-          ),
-          child: Column(
-            children: [
-              // Main clothing types (most common)
-              const Text(
-                'Main Types',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryBlack,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ClothingType.top,
-                  ClothingType.bottom,
-                  ClothingType.dress,
-                  ClothingType.shoes,
-                  ClothingType.outerwear,
-                ].map((type) => _buildTypeChip(type, isMain: true)).toList(),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Specific Types',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryBlack,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ClothingType.jumpsuit,
-                  ClothingType.suit,
-                  ClothingType.swimwear,
-                  ClothingType.sleepwear,
-                  ClothingType.activewear,
-                  ClothingType.undergarment,
-                ].map((type) => _buildTypeChip(type)).toList(),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Accessories',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryBlack,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ClothingType.accessory,
-                  ClothingType.jewelry,
-                  ClothingType.bag,
-                  ClothingType.hat,
-                  ClothingType.scarf,
-                  ClothingType.belt,
-                  ClothingType.gloves,
-                ].map((type) => _buildTypeChip(type)).toList(),
-              ),
-            ],
-          ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: ClothingType.values.map((type) => _buildTypeChip(type)).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildTypeChip(ClothingType type, {bool isMain = false}) {
+  Widget _buildTypeChip(ClothingType type) {
     final isSelected = _selectedType == type;
     return ChoiceChip(
-      label: Text(
-        _getTypeLabel(type),
-        style: TextStyle(
-          fontSize: isMain ? 14 : 12,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
+      label: Text(_getTypeLabel(type)),
       selected: isSelected,
       onSelected: (selected) {
         if (selected) {
@@ -1227,59 +1119,77 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
           });
         }
       },
-      selectedColor: AppTheme.pastelPink.withValues(alpha: 0.8),
-      backgroundColor: isMain
-          ? AppTheme.primaryWhite
-          : AppTheme.mediumGray.withValues(alpha: 0.1),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMain ? 12 : 8,
-        vertical: isMain ? 8 : 4,
-      ),
+      selectedColor: AppTheme.pastelPink,
+      backgroundColor: AppTheme.pastelPink.withValues(alpha: 0.3),
+      side: BorderSide.none,
     );
   }
 
   void _showColorPicker(int colorIndex) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Choose ${colorIndex == 0 ? 'Primary' : colorIndex == 1 ? 'Secondary' : 'Accent'} Color'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Common colors grid
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 6,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: _commonColors.length,
-                itemBuilder: (context, index) {
-                  final color = _commonColors[index];
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedColors[colorIndex] = color;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Container(
+      builder: (BuildContext dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.primaryBlack,
+        title: Text(
+          'Choose ${colorIndex == 0 ? 'Primary' : colorIndex == 1 ? 'Secondary' : 'Accent'} Color',
+          style: const TextStyle(color: AppTheme.primaryWhite),
+        ),
+        content: SizedBox(
+          width: 300,
+          height: 500,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.75,
+            ),
+            itemCount: _paletteColors.length,
+            itemBuilder: (context, index) {
+              final colorData = _paletteColors[index];
+              final color = _hexToColor(colorData['hex']!);
+              final isSelected = _selectedColors[colorIndex] == color;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedColors[colorIndex] = color;
+                  });
+                  Navigator.pop(dialogContext);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: color,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1,
+                          color: isSelected ? AppTheme.pastelPink : Colors.grey.shade300,
+                          width: isSelected ? 3 : 1,
                         ),
                       ),
+                      child: isSelected
+                          ? Icon(
+                              Icons.check,
+                              color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                              size: 20,
+                            )
+                          : null,
                     ),
-                  );
-                },
-              ),
-            ],
+                    const SizedBox(height: 4),
+                    Text(
+                      colorData['name']!,
+                      style: const TextStyle(fontSize: 10, color: AppTheme.primaryWhite),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         actions: [
@@ -1289,61 +1199,18 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                 setState(() {
                   _selectedColors[colorIndex] = null;
                 });
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
-              child: const Text('Remove'),
+              child: const Text('Remove', style: TextStyle(color: Colors.red)),
             ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
         ],
       ),
     );
   }
-
-  final List<Color> _commonColors = [
-    // Basic colors
-    Colors.black,
-    Colors.white,
-    Colors.grey,
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.blue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.yellow,
-    Colors.orange,
-    Colors.brown,
-    Colors.indigo,
-    // Additional shades
-    Colors.red.shade300,
-    Colors.pink.shade300,
-    Colors.purple.shade300,
-    Colors.blue.shade300,
-    Colors.cyan.shade300,
-    Colors.teal.shade300,
-    Colors.green.shade300,
-    Colors.yellow.shade300,
-    Colors.orange.shade300,
-    Colors.brown.shade300,
-    Colors.grey.shade300,
-    Colors.indigo.shade300,
-    Colors.red.shade700,
-    Colors.pink.shade700,
-    Colors.purple.shade700,
-    Colors.blue.shade700,
-    Colors.cyan.shade700,
-    Colors.teal.shade700,
-    Colors.green.shade700,
-    Colors.yellow.shade700,
-    Colors.orange.shade700,
-    Colors.brown.shade700,
-    Colors.grey.shade700,
-    Colors.indigo.shade700,
-  ];
 
   String _generateItemName(ClothingType type, int index) {
     final typeName = _getTypeLabel(type);
@@ -1354,22 +1221,13 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     switch (type) {
       case ClothingType.top: return 'Top';
       case ClothingType.bottom: return 'Bottom';
-      case ClothingType.shoes: return 'Shoes';
-      case ClothingType.accessory: return 'Accessory';
-      case ClothingType.outerwear: return 'Outerwear';
-      case ClothingType.undergarment: return 'Undergarment';
-      case ClothingType.jewelry: return 'Jewelry';
-      case ClothingType.bag: return 'Bag';
-      case ClothingType.hat: return 'Hat';
-      case ClothingType.scarf: return 'Scarf';
-      case ClothingType.belt: return 'Belt';
-      case ClothingType.gloves: return 'Gloves';
-      case ClothingType.swimwear: return 'Swimwear';
-      case ClothingType.sleepwear: return 'Sleepwear';
-      case ClothingType.activewear: return 'Activewear';
       case ClothingType.dress: return 'Dress';
-      case ClothingType.jumpsuit: return 'Jumpsuit';
-      case ClothingType.suit: return 'Suit';
+      case ClothingType.shoes: return 'Shoes';
+      case ClothingType.bag: return 'Bag';
+      case ClothingType.accessory: return 'Accessory';
+      case ClothingType.outerwear: return 'Coat';
+      case ClothingType.activewear: return 'Activewear';
+      case ClothingType.swimwear: return 'Swimwear';
     }
   }
 }

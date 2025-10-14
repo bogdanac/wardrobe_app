@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/themes/app_theme.dart';
 
 class CustomBottomNav extends StatelessWidget {
@@ -15,9 +16,9 @@ class CustomBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-      decoration: const BoxDecoration(
-        color: AppTheme.primaryBlack,
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: const [
           BoxShadow(
             color: Colors.black12,
             blurRadius: 10,
@@ -32,39 +33,18 @@ class CustomBottomNav extends StatelessWidget {
         children: [
           _buildNavItem(
             context,
-            icon: Icons.shuffle_outlined,
-            activeIcon: Icons.shuffle,
-            label: 'Generate',
-            index: 0,
-          ),
-          _buildNavItem(
-            context,
             icon: Icons.checkroom_outlined,
             activeIcon: Icons.checkroom,
             label: 'Closet',
-            index: 1,
+            index: 0,
           ),
           _buildNavItem(
             context,
             icon: Icons.palette_outlined,
             activeIcon: Icons.palette,
             label: 'Outfits',
-            index: 2,
+            index: 1,
             isCenter: true,
-          ),
-          _buildNavItem(
-            context,
-            icon: Icons.bar_chart_outlined,
-            activeIcon: Icons.bar_chart,
-            label: 'Stats',
-            index: 3,
-          ),
-          _buildNavItem(
-            context,
-            icon: Icons.settings_outlined,
-            activeIcon: Icons.settings,
-            label: 'Settings',
-            index: 4,
           ),
         ],
         ),
@@ -81,11 +61,20 @@ class CustomBottomNav extends StatelessWidget {
     bool isCenter = false,
   }) {
     final isActive = currentIndex == index;
-    
-    return GestureDetector(
-      onTap: () => onTap(index),
+
+    return InkWell(
+      onTap: () {
+        // Add haptic feedback for better user experience
+        HapticFeedback.lightImpact();
+        onTap(index);
+      },
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        constraints: const BoxConstraints(
+          minWidth: 60,
+          minHeight: 60,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -106,7 +95,7 @@ class CustomBottomNav extends StatelessWidget {
                 ),
                 child: Icon(
                   isActive ? activeIcon : icon,
-                  color: AppTheme.primaryBlack,
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 28,
                 ),
               )

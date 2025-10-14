@@ -164,7 +164,7 @@ class _ClothingFilterBottomSheetState extends ConsumerState<ClothingFilterBottom
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Weather Range',
+          'Weather',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -219,38 +219,20 @@ class _ClothingFilterBottomSheetState extends ConsumerState<ClothingFilterBottom
         return 'Top';
       case ClothingType.bottom:
         return 'Bottom';
+      case ClothingType.dress:
+        return 'Dress';
       case ClothingType.shoes:
         return 'Shoes';
+      case ClothingType.bag:
+        return 'Bag';
       case ClothingType.accessory:
         return 'Accessory';
       case ClothingType.outerwear:
-        return 'Outerwear';
-      case ClothingType.undergarment:
-        return 'Undergarment';
-      case ClothingType.jewelry:
-        return 'Jewelry';
-      case ClothingType.bag:
-        return 'Bag';
-      case ClothingType.hat:
-        return 'Hat';
-      case ClothingType.scarf:
-        return 'Scarf';
-      case ClothingType.belt:
-        return 'Belt';
-      case ClothingType.gloves:
-        return 'Gloves';
-      case ClothingType.swimwear:
-        return 'Swimwear';
-      case ClothingType.sleepwear:
-        return 'Sleepwear';
+        return 'Coat';
       case ClothingType.activewear:
         return 'Activewear';
-      case ClothingType.dress:
-        return 'Dress';
-      case ClothingType.jumpsuit:
-        return 'Jumpsuit';
-      case ClothingType.suit:
-        return 'Suit';
+      case ClothingType.swimwear:
+        return 'Swimwear';
     }
   }
 

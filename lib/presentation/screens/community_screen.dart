@@ -215,22 +215,21 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 80, color: AppTheme.mediumGray),
-          SizedBox(height: 24),
+          const Icon(Icons.people_outline, size: 80, color: AppTheme.mediumGray),
+          const SizedBox(height: 24),
           Text(
             'Welcome to the Community!',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: AppTheme.primaryBlack,
             ),
           ),
-          SizedBox(height: 12),
-          Text(
+          const SizedBox(height: 12),
+          const Text(
             'Discover amazing outfits shared by\nfashion enthusiasts around the world',
             style: TextStyle(
               fontSize: 14,
@@ -238,8 +237,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 24),
-          Text(
+          const SizedBox(height: 24),
+          const Text(
             'Be the first to share an outfit! 👗✨',
             style: TextStyle(
               fontSize: 14,

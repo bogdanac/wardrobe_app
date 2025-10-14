@@ -3,22 +3,13 @@ import 'package:equatable/equatable.dart';
 enum ClothingType {
   top,
   bottom,
+  dress,
   shoes,
+  bag,
   accessory,
   outerwear,
-  undergarment,
-  jewelry,
-  bag,
-  hat,
-  scarf,
-  belt,
-  gloves,
-  swimwear,
-  sleepwear,
   activewear,
-  dress,
-  jumpsuit,
-  suit
+  swimwear
 }
 
 enum Season {

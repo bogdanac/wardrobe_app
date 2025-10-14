@@ -45,7 +45,7 @@ class CategoryModel {
     return CategoryModel(
       id: entity.id,
       name: entity.name,
-      colorValue: entity.color.value,
+      colorValue: entity.color.toARGB32(),
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       description: entity.description,

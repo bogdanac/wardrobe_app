@@ -8,79 +8,43 @@ class EnumUtils {
         return 'Top';
       case ClothingType.bottom:
         return 'Bottom';
+      case ClothingType.dress:
+        return 'Dress';
       case ClothingType.shoes:
         return 'Shoes';
+      case ClothingType.bag:
+        return 'Bag';
       case ClothingType.accessory:
         return 'Accessory';
       case ClothingType.outerwear:
-        return 'Outerwear';
-      case ClothingType.undergarment:
-        return 'Undergarment';
-      case ClothingType.jewelry:
-        return 'Jewelry';
-      case ClothingType.bag:
-        return 'Bag';
-      case ClothingType.hat:
-        return 'Hat';
-      case ClothingType.scarf:
-        return 'Scarf';
-      case ClothingType.belt:
-        return 'Belt';
-      case ClothingType.gloves:
-        return 'Gloves';
-      case ClothingType.swimwear:
-        return 'Swimwear';
-      case ClothingType.sleepwear:
-        return 'Sleepwear';
+        return 'Coat';
       case ClothingType.activewear:
         return 'Activewear';
-      case ClothingType.dress:
-        return 'Dress';
-      case ClothingType.jumpsuit:
-        return 'Jumpsuit';
-      case ClothingType.suit:
-        return 'Suit';
+      case ClothingType.swimwear:
+        return 'Swimwear';
     }
   }
 
   static IconData getClothingTypeIcon(ClothingType type) {
     switch (type) {
       case ClothingType.top:
-        return Icons.style;
+        return Icons.checkroom;
       case ClothingType.bottom:
-        return Icons.man;
+        return Icons.compress;
+      case ClothingType.dress:
+        return Icons.weekend;
       case ClothingType.shoes:
-        return Icons.directions_walk;
+        return Icons.elevator_rounded;
+      case ClothingType.bag:
+        return Icons.shopping_bag_outlined;
       case ClothingType.accessory:
         return Icons.star;
       case ClothingType.outerwear:
-        return Icons.checkroom;
-      case ClothingType.undergarment:
-        return Icons.people;
-      case ClothingType.jewelry:
-        return Icons.diamond;
-      case ClothingType.bag:
-        return Icons.work;
-      case ClothingType.hat:
-        return Icons.sports_baseball;
-      case ClothingType.scarf:
-        return Icons.dry_cleaning;
-      case ClothingType.belt:
-        return Icons.line_style;
-      case ClothingType.gloves:
-        return Icons.back_hand;
+        return Icons.ac_unit;
+      case ClothingType.activewear:
+        return Icons.directions_run;
       case ClothingType.swimwear:
         return Icons.pool;
-      case ClothingType.sleepwear:
-        return Icons.bedtime;
-      case ClothingType.activewear:
-        return Icons.fitness_center;
-      case ClothingType.dress:
-        return Icons.woman;
-      case ClothingType.jumpsuit:
-        return Icons.woman_2;
-      case ClothingType.suit:
-        return Icons.business;
     }
   }
 
@@ -117,17 +81,17 @@ class EnumUtils {
   static String getWeatherRangeLabel(WeatherRange range) {
     switch (range) {
       case WeatherRange.veryHot:
-        return 'Very Hot (28°C+)';
+        return 'Very Hot (> 28°C)';
       case WeatherRange.hot:
-        return 'Hot (22°C+)';
+        return 'Hot (> 22°C)';
       case WeatherRange.warm:
-        return 'Warm (14°C+)';
+        return 'Warm (> 14°C)';
       case WeatherRange.cool:
-        return 'Cool (4°C+)';
+        return 'Cool (> 4°C)';
       case WeatherRange.cold:
-        return 'Cold (-4°C+)';
+        return 'Cold (> -4°C)';
       case WeatherRange.veryCold:
-        return 'Very Cold (-15°C+)';
+        return 'Very Cold (> -15°C)';
     }
   }
 

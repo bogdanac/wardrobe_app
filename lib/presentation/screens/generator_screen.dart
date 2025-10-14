@@ -170,43 +170,19 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 16),
-          Text(
-            'Generate Your Perfect Outfit',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.mediumGray,
-            ),
+          Icon(
+            Icons.auto_awesome,
+            size: 48,
+            color: AppTheme.mediumGray,
           ),
           SizedBox(height: 16),
           Text(
-            'Customize the filters above and tap Generate',
+            'No outfits generated yet',
             style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.mediumGray,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 24),
-          Text(
-            '✨ AI will create outfits based on:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
               color: AppTheme.mediumGray,
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            '• Color compatibility\n• Style preferences\n• Weather conditions\n• Season appropriateness',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.mediumGray,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 96),
         ],
       ),
     );
@@ -335,7 +311,12 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
                   _occasion = selected ? occasion : null;
                 });
               },
-              selectedColor: AppTheme.pastelPink.withValues(alpha: 0.3),
+              selectedColor: AppTheme.darkerPink,
+              backgroundColor: AppTheme.darkerPink.withValues(alpha: 0.9),
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
             )).toList(),
           ),
           
@@ -356,7 +337,12 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
                   _mood = selected ? mood : null;
                 });
               },
-              selectedColor: AppTheme.pastelPink.withValues(alpha: 0.3),
+              selectedColor: AppTheme.darkerPink,
+              backgroundColor: AppTheme.darkerPink.withValues(alpha: 0.9),
+              side: BorderSide.none,
+              labelStyle: const TextStyle(
+                color: Colors.white,
+              ),
             )).toList(),
           ),
           
