@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/services/database_service.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/themes/app_theme.dart';
-import '../../core/services/backup_service.dart';
 import '../../core/config/background_removal_config.dart';
 import '../../core/config/api_config.dart';
+import '../../core/services/backup_export_service.dart';
+import '../../core/services/backup_import_service.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/outfit_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/auth_provider.dart';
 import 'manage_categories_screen.dart';
 import 'manage_colors_screen.dart';
 
@@ -23,8 +25,93 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final BackupService _backupService = BackupService();
   bool _isProcessing = false;
+
+  Widget _buildUserProfileSection() {
+    final authService = ref.watch(authServiceProvider);
+    final authState = ref.watch(authStateProvider);
+
+    return authState.when(
+      data: (user) {
+        if (user == null) return const SizedBox.shrink();
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Account',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // Profile picture
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: AppTheme.pastelPink,
+                      backgroundImage: authService.userPhotoUrl != null
+                          ? NetworkImage(authService.userPhotoUrl!)
+                          : null,
+                      child: authService.userPhotoUrl == null
+                          ? Icon(Icons.person, size: 30, color: AppTheme.primaryBlack)
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    // User info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            authService.userDisplayName ?? 'User',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            authService.userEmail ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.mediumGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 32),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text('Sign Out'),
+                  subtitle: const Text('Sign out from your account'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: _showSignOutDialog,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,81 +125,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
+          _buildUserProfileSection(),
+          const SizedBox(height: 32),
           _buildAppSection(settings),
           const SizedBox(height: 32),
           _buildImageProcessingSection(),
           const SizedBox(height: 32),
           _buildDataSection(),
           const SizedBox(height: 32),
-          _buildBackupSection(),
-          const SizedBox(height: 32),
           _buildAboutSection(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBackupSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Backup & Restore',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.backup, color: AppTheme.pastelPink),
-              title: const Text('Create Backup'),
-              subtitle: const Text('Export your wardrobe data'),
-              trailing: _isProcessing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_ios),
-              onTap: _isProcessing ? null : _createBackup,
-            ),
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.share, color: AppTheme.gold),
-              title: const Text('Share Backup'),
-              subtitle: const Text('Share your wardrobe backup'),
-              trailing: _isProcessing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_ios),
-              onTap: _isProcessing ? null : _shareBackup,
-            ),
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.restore, color: Theme.of(context).colorScheme.onSurface),
-              title: const Text('Restore Backup'),
-              subtitle: const Text('Import wardrobe data from backup'),
-              trailing: _isProcessing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_ios),
-              onTap: _isProcessing ? null : _restoreBackup,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -207,18 +229,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.refresh, color: AppTheme.mediumGray),
-              title: const Text('Refresh Data'),
-              subtitle: const Text('Reload all data from database'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _refreshData,
-            ),
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.cleaning_services, color: AppTheme.gold),
-              title: const Text('Clean Up Categories'),
-              subtitle: const Text('Remove "unassigned" from all items'),
+              leading: const Icon(Icons.backup, color: AppTheme.pastelPink),
+              title: const Text('Export Complete Backup'),
+              subtitle: const Text('Save all data and images'),
               trailing: _isProcessing
                   ? const SizedBox(
                       width: 20,
@@ -226,16 +239,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.arrow_forward_ios),
-              onTap: _isProcessing ? null : _cleanupUnassignedCategories,
+              onTap: _isProcessing ? null : _exportBackup,
             ),
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.delete_sweep, color: Colors.red),
-              title: const Text('Clear All Data'),
-              subtitle: const Text('Delete all items and outfits'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _showClearDataDialog,
+              leading: const Icon(Icons.restore, color: AppTheme.gold),
+              title: const Text('Import Backup'),
+              subtitle: const Text('Restore data from backup files'),
+              trailing: _isProcessing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_ios),
+              onTap: _isProcessing ? null : _importBackup,
             ),
           ],
         ),
@@ -356,187 +375,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _createBackup() async {
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      final filePath = await _backupService.exportBackup();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Backup created successfully!\nSaved to: $filePath'),
-            backgroundColor: AppTheme.pastelPink,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create backup: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isProcessing = false;
-      });
-    }
-  }
-
-  Future<void> _shareBackup() async {
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      await _backupService.shareBackup();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share backup: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isProcessing = false;
-      });
-    }
-  }
-
-  Future<void> _restoreBackup() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Restore Backup'),
-        content: const Text(
-          'This will replace all your current data with the backup data. This action cannot be undone.\n\nDo you want to continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Restore',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      final backupData = await _backupService.importBackup();
-      await _backupService.restoreBackup(backupData);
-      
-      // Refresh all providers
-      ref.invalidate(allClothingItemsProvider);
-      ref.invalidate(filteredClothingItemsProvider);
-      ref.invalidate(allOutfitsProvider);
-      ref.invalidate(filteredOutfitsProvider);
-      ref.invalidate(favoriteOutfitsProvider);
-      ref.invalidate(wardrobeStatsProvider);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Backup restored successfully! 🎉'),
-            backgroundColor: AppTheme.pastelPink,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to restore backup: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isProcessing = false;
-      });
-    }
-  }
-
-  void _refreshData() {
-    ref.invalidate(allClothingItemsProvider);
-    ref.invalidate(filteredClothingItemsProvider);
-    ref.invalidate(allOutfitsProvider);
-    ref.invalidate(filteredOutfitsProvider);
-    ref.invalidate(favoriteOutfitsProvider);
-    ref.invalidate(wardrobeStatsProvider);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Data refreshed successfully!'),
-        backgroundColor: AppTheme.pastelPink,
-      ),
-    );
-  }
-
-  Future<void> _cleanupUnassignedCategories() async {
-    setState(() => _isProcessing = true);
-
-    try {
-      final repository = ref.read(clothingRepositoryProvider);
-      final allItems = await repository.getAllClothingItems();
-
-      int updatedCount = 0;
-      for (final item in allItems) {
-        if (item.categories.contains('unassigned')) {
-          final updatedCategories = item.categories.where((cat) => cat != 'unassigned').toList();
-          final updatedItem = item.copyWith(categories: updatedCategories);
-          await repository.saveClothingItem(updatedItem);
-          updatedCount++;
-        }
-      }
-
-      // Refresh data
-      ref.invalidate(allClothingItemsProvider);
-      ref.invalidate(filteredClothingItemsProvider);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Cleaned up $updatedCount item(s)'),
-            backgroundColor: AppTheme.pastelPink,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error cleaning up categories: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
-  }
 
   void _showBackgroundRemovalDialog(RemovalMethod currentMethod) {
     showDialog(
@@ -605,62 +443,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showClearDataDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text(
-          'This will permanently delete all your clothing items, outfits, and related data. This action cannot be undone.\n\nAre you absolutely sure?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _clearAllData();
-            },
-            child: const Text(
-              'Delete All',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _clearAllData() async {
-    try {
-      final databaseService = DatabaseService.instance;
-      await databaseService.clear();
-      
-      // Refresh all providers
-      ref.invalidate(allClothingItemsProvider);
-      ref.invalidate(filteredClothingItemsProvider);
-      ref.invalidate(allOutfitsProvider);
-      ref.invalidate(filteredOutfitsProvider);
-      ref.invalidate(favoriteOutfitsProvider);
-      ref.invalidate(wardrobeStatsProvider);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All data cleared successfully!'),
-          backgroundColor: AppTheme.pastelPink,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to clear data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   void _showHelpDialog() {
     showDialog(
@@ -723,22 +505,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
+                'Data Storage:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• Data is synced via Firebase (Google Cloud)'),
+              Text('• Cached locally on your device for offline use'),
+              Text('• Photos stored in Firebase Cloud Storage'),
+              Text('• Enables multi-device sync and backup'),
+              SizedBox(height: 16),
+              Text(
                 'Data Collection:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text('• All data is stored locally on your device'),
-              Text('• No personal information is collected'),
-              Text('• Photos are processed locally'),
-              SizedBox(height: 16),
-              Text(
-                'Data Usage:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text('• Data is used only for app functionality'),
-              Text('• No data is shared with third parties'),
-              Text('• Backup files are under your control'),
+              Text('• Only Google account info (email, name, photo)'),
+              Text('• Your wardrobe data (items, outfits, photos)'),
+              Text('• No tracking, analytics, or third-party sharing'),
               SizedBox(height: 16),
               Text(
                 'Your Rights:',
@@ -746,8 +529,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               SizedBox(height: 8),
               Text('• You own all your data'),
-              Text('• You can export or delete data anytime'),
-              Text('• No tracking or analytics'),
+              Text('• Export backups anytime'),
+              Text('• Sign out to stop sync'),
+              Text('• Data deleted when you delete your account'),
             ],
           ),
         ),
@@ -777,5 +561,263 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context) => const ManageColorsScreen(),
       ),
     );
+  }
+
+  Future<void> _exportBackup() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final clothingRepository = ref.read(clothingRepositoryProvider);
+      final outfitRepository = ref.read(outfitRepositoryProvider);
+      final exportService = BackupExportService(clothingRepository, outfitRepository);
+
+      // Show progress dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Creating backup...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final backupPaths = await exportService.exportCompleteBackup();
+
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+      }
+
+      // Share the backup files
+      await exportService.shareBackupFiles(backupPaths);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backup created successfully!'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog if open
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create backup: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _importBackup() async {
+    try {
+      // Pick JSON file
+      final jsonResult = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        dialogTitle: 'Select backup JSON file',
+      );
+
+      if (jsonResult == null || jsonResult.files.isEmpty) {
+        return; // User cancelled
+      }
+
+      // Ask if user has ZIP file (optional for old Isar backups)
+      final hasZip = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Image Files'),
+          content: const Text('Do you have a ZIP file with images?\n\n(Select "No" if using old backup format with local image paths)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Yes'),
+            ),
+          ],
+        ),
+      );
+
+      if (hasZip == null) return; // User cancelled
+
+      String? zipPath;
+      if (hasZip) {
+        // Pick ZIP file
+        final zipResult = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['zip'],
+          dialogTitle: 'Select backup ZIP file',
+        );
+
+        if (zipResult == null || zipResult.files.isEmpty) {
+          return; // User cancelled
+        }
+
+        zipPath = zipResult.files.first.path;
+      }
+
+      setState(() => _isProcessing = true);
+
+      final clothingRepository = ref.read(clothingRepositoryProvider);
+      final outfitRepository = ref.read(outfitRepositoryProvider);
+      final importService = BackupImportService(clothingRepository, outfitRepository);
+
+      // Show progress dialog
+      String progressText = 'Starting import...';
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(progressText),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      }
+
+      final result = await importService.importCompleteBackup(
+        jsonFilePath: jsonResult.files.first.path!,
+        zipFilePath: zipPath,
+        onProgress: (progress) {
+          progressText = progress;
+          if (mounted) {
+            setState(() {});
+          }
+        },
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+      }
+
+      // Refresh all data
+      ref.invalidate(allClothingItemsProvider);
+      ref.invalidate(filteredClothingItemsProvider);
+      ref.invalidate(allOutfitsProvider);
+      ref.invalidate(filteredOutfitsProvider);
+      ref.invalidate(favoriteOutfitsProvider);
+      ref.invalidate(wardrobeStatsProvider);
+
+      if (mounted) {
+        // Show result dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Import Complete'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Items imported: ${result.itemsImported}'),
+                Text('Outfits imported: ${result.outfitsImported}'),
+                Text('Images uploaded: ${result.imagesUploaded}'),
+                if (result.hasErrors) ...[
+                  const SizedBox(height: 16),
+                  Text('Errors: ${result.errors.length}', style: const TextStyle(color: Colors.orange)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog if open
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to import backup: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  void _showSignOutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _signOut();
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signOut();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signed out successfully'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to sign out: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

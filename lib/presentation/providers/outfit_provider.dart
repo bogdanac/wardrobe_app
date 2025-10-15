@@ -2,12 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/outfit.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/repositories/outfit_repository.dart';
-import '../../data/repositories/outfit_repository_impl.dart';
+import '../../data/repositories/firebase_outfit_repository.dart';
 import '../../core/services/outfit_generator_service.dart';
 import 'clothing_provider.dart';
+import 'auth_provider.dart';
 
 final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
-  return OutfitRepositoryImpl();
+  // Get the current user ID from auth provider
+  final userId = ref.watch(currentUserIdProvider);
+
+  return FirebaseOutfitRepository(userId: userId);
 });
 
 final outfitGeneratorProvider = Provider<OutfitGeneratorService>((ref) {

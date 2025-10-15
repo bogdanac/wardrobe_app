@@ -159,7 +159,7 @@ class EnhancedOutfitGenerator {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       tags: _generateOutfitTags(outfitItems, season, occasion),
-      season: season,
+      seasons: season != null ? [season] : [],
       weatherRanges: weatherRanges ?? [],
       categories: _generateOutfitCategories(outfitItems),
     );
@@ -329,15 +329,15 @@ class EnhancedOutfitGenerator {
 
   /// Calculate season appropriateness score
   double _calculateSeasonScore(ClothingItem item, Season season) {
-    if (item.season == null) return 0;
+    if (item.seasons.isEmpty) return 0;
 
-    if (item.season == season || item.season == Season.allSeason) {
+    if (item.seasons.contains(season) || item.seasons.contains(Season.allSeason)) {
       return 3;
     }
 
     // Partial matches for transitional seasons
-    if ((season == Season.spring && item.season == Season.summer) ||
-        (season == Season.autumn && item.season == Season.winter)) {
+    if ((season == Season.spring && item.seasons.contains(Season.summer)) ||
+        (season == Season.autumn && item.seasons.contains(Season.winter))) {
       return 1;
     }
 

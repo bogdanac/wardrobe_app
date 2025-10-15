@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isSignUp = false;
   bool _obscurePassword = true;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -87,6 +88,28 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      await _authService.signInWithGoogle();
+      // No need to navigate - auth state change will handle it
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to sign in with Google: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
       }
     }
   }
@@ -249,6 +272,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // Divider
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: AppTheme.mediumGray)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'OR',
+                          style: TextStyle(color: AppTheme.mediumGray),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: AppTheme.mediumGray)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Google Sign In Button
+                  ElevatedButton.icon(
+                    onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                    icon: _isGoogleLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.login, color: Colors.black87),
+                    label: const Text(
+                      'Continue with Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 2,
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Continue without sign in (for local mode)

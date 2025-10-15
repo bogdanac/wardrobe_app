@@ -10,6 +10,7 @@ import '../../core/errors/error_handler.dart';
 import '../../core/utils/loading_state.dart';
 import '../providers/clothing_provider.dart';
 import '../widgets/unified_filters.dart';
+import '../widgets/adaptive_clothing_image.dart';
 import 'archive_confirmation_screen.dart';
 import 'delete_confirmation_screen.dart';
 
@@ -36,7 +37,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   final _uuid = const Uuid();
 
   ClothingType _selectedType = ClothingType.top;
-  Season? _selectedSeason;
+  List<Season> _selectedSeasons = [];
   List<WeatherRange> _selectedWeatherRanges = [];
   List<String> _selectedCategories = [];
   List<Color> _detectedColors = [];
@@ -47,7 +48,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   List<Map<String, dynamic>> _processedImages = []; // {file: File, colors: List<Color>}
   MetallicElements _selectedMetallicElements = MetallicElements.none;
   bool _isProcessing = false;
-  bool _isMultiMode = false;
+  final bool _isMultiMode = false;
   LoadingState _loadingState = LoadingState.hidden;
   final ErrorHandler _errorHandler = ErrorHandler();
   List<Map<String, String>> _paletteColors = [];
@@ -83,7 +84,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   void _initializeWithExistingItem() {
     final item = widget.item!;
     _selectedType = item.type;
-    _selectedSeason = item.season;
+    _selectedSeasons = List.from(item.seasons);
     _selectedWeatherRanges = List.from(item.weatherRanges);
     _selectedCategories = List.from(item.categories);
     _selectedMetallicElements = item.metallicElements;
@@ -96,7 +97,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     }
 
     // Initialize with existing image if available
-    if (item.imagePath != null) {
+    // Don't add to _selectedImages if it's a network URL - it will be displayed separately
+    if (item.imagePath != null && !item.imagePath!.startsWith('http')) {
       _selectedImages = [File(item.imagePath!)];
     }
   }
@@ -231,7 +233,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               showFavorites: false,
               showMetallicElements: false,
               selectedCategories: _selectedCategories,
-              selectedSeason: _selectedSeason,
+              selectedSeasons: _selectedSeasons,
               selectedWeatherRanges: _selectedWeatherRanges,
               selectedColors: const [],
               selectedTypes: [_selectedType],
@@ -242,9 +244,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   _selectedCategories = categories;
                 });
               },
-              onSeasonChanged: (season) {
+              onSeasonsChanged: (seasons) {
                 setState(() {
-                  _selectedSeason = season;
+                  _selectedSeasons = seasons;
                 });
               },
               onWeatherChanged: (ranges) {
@@ -281,7 +283,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               showFavorites: false,
               showMetallicElements: false,
               selectedCategories: _selectedCategories,
-              selectedSeason: _selectedSeason,
+              selectedSeasons: _selectedSeasons,
               selectedWeatherRanges: _selectedWeatherRanges,
               selectedColors: const [],
               selectedTypes: [_selectedType],
@@ -292,7 +294,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   _selectedCategories = categories;
                 });
               },
-              onSeasonChanged: (season) {},
+              onSeasonsChanged: (seasons) {},
               onWeatherChanged: (ranges) {},
               onColorsChanged: (colors) {},
               onTypesChanged: (types) {},
@@ -357,9 +359,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Image.file(
-                            File(widget.item!.imagePath!),
-                            fit: BoxFit.contain,
+                          child: AdaptiveClothingImage(
+                            imagePath: widget.item!.imagePath,
+                            type: widget.item!.type,
                           ),
                         ),
                       )
@@ -901,7 +903,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             imagePath: imagePath,
             colors: _selectedColors.where((c) => c != null).map((color) => _colorToHex(color!)).toList(),
             categories: _selectedCategories,
-            season: _selectedSeason,
+            seasons: _selectedSeasons,
             weatherRanges: _selectedWeatherRanges,
             wearCount: 0,
             lastWornDate: null,
@@ -957,7 +959,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
           additionalImages: additionalImagePaths,
           colors: _selectedColors.where((c) => c != null).map((color) => _colorToHex(color!)).toList(),
           categories: _selectedCategories,
-          season: _selectedSeason,
+          seasons: _selectedSeasons,
           weatherRanges: _selectedWeatherRanges,
           wearCount: widget.item?.wearCount ?? 0,
           lastWornDate: widget.item?.lastWornDate,
@@ -986,9 +988,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
 
       ref.invalidate(allClothingItemsProvider);
       ref.invalidate(filteredClothingItemsProvider);
-    } catch (e, stackTrace) {
-      print('Error saving item: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       _handleError(e, 'saving clothing item');
     } finally {
       setState(() {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:isar/isar.dart';
 import 'app_exceptions.dart';
 import '../themes/app_theme.dart';
 
@@ -20,15 +19,6 @@ class ErrorHandler {
       return NetworkException(
         'Network connection failed',
         code: 'no_internet',
-        originalError: error,
-      );
-    }
-
-    // Database errors
-    if (error is IsarError) {
-      return DatabaseException(
-        'Database operation failed',
-        code: 'isar_error',
         originalError: error,
       );
     }

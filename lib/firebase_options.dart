@@ -23,20 +23,11 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -50,20 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBd9ZebvfOOAkLgC66QdqoCJNcFcpjJCbg',
-    appId: '1:259011580425:web:4cd778ca22d4a6968e1ed8',
-    messagingSenderId: '259011580425',
-    projectId: 'wardrobe-app-19e7e',
-    authDomain: 'wardrobe-app-19e7e.firebaseapp.com',
-    storageBucket: 'wardrobe-app-19e7e.firebasestorage.app',
-    measurementId: 'G-EX5F4904X9',
+    apiKey: 'AIzaSyBDVq-qlxhv8lXCjKRYmG1K9RuxqWqRC2k',
+    appId: '1:323501498472:web:fd3214d6dcb708a5559bdd',
+    messagingSenderId: '323501498472',
+    projectId: 'b-bapp-n0ke4x',
+    authDomain: 'b-bapp-n0ke4x.firebaseapp.com',
+    storageBucket: 'b-bapp-n0ke4x.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAG3VWrSXe5FWrlir-38f_fxgmbwY9PPw0',
-    appId: '1:259011580425:android:33ac4cc5eff84b058e1ed8',
-    messagingSenderId: '259011580425',
-    projectId: 'wardrobe-app-19e7e',
-    storageBucket: 'wardrobe-app-19e7e.firebasestorage.app',
+    apiKey: 'AIzaSyBESRjCuTl99f6Y-fAHmzrguMThdmHhlGA',
+    appId: '1:323501498472:android:d5f9d94b593bccc7559bdd',
+    messagingSenderId: '323501498472',
+    projectId: 'b-bapp-n0ke4x',
+    storageBucket: 'b-bapp-n0ke4x.firebasestorage.app',
   );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBvmXDHtJodAEz7LeKh-2AvViJJy_p9Fi0',
+    appId: '1:323501498472:ios:5db2429419fba861559bdd',
+    messagingSenderId: '323501498472',
+    projectId: 'b-bapp-n0ke4x',
+    storageBucket: 'b-bapp-n0ke4x.firebasestorage.app',
+    iosBundleId: 'com.wardrobeapp.wardrobeApp',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBvmXDHtJodAEz7LeKh-2AvViJJy_p9Fi0',
+    appId: '1:323501498472:ios:5db2429419fba861559bdd',
+    messagingSenderId: '323501498472',
+    projectId: 'b-bapp-n0ke4x',
+    storageBucket: 'b-bapp-n0ke4x.firebasestorage.app',
+    iosBundleId: 'com.wardrobeapp.wardrobeApp',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBDVq-qlxhv8lXCjKRYmG1K9RuxqWqRC2k',
+    appId: '1:323501498472:web:c3bba746845ed67c559bdd',
+    messagingSenderId: '323501498472',
+    projectId: 'b-bapp-n0ke4x',
+    authDomain: 'b-bapp-n0ke4x.firebaseapp.com',
+    storageBucket: 'b-bapp-n0ke4x.firebasestorage.app',
+  );
+
 }

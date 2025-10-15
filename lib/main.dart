@@ -3,23 +3,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/themes/app_theme.dart';
-import 'core/services/database_service.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/login_screen.dart';
+import 'presentation/providers/auth_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  // Initialize Firebase only if not already initialized
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Enable Firestore offline persistence
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (e) {
+    // Firebase already initialized, ignore
+    if (!e.toString().contains('duplicate-app')) {
+      rethrow;
+    }
+  }
+
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
-  
-  await DatabaseService.instance.isar;
-  
+
   runApp(
     const ProviderScope(
       child: WardrobeApp(),
@@ -41,10 +55,41 @@ class WardrobeApp extends ConsumerWidget {
           title: 'Outfits',
           theme: AppTheme.darkTheme,
           themeMode: ThemeMode.dark,
-          home: const HomeScreen(),
+          home: const AuthGate(),
           debugShowCheckedModeBanner: false,
         );
       },
+    );
+  }
+}
+
+/// AuthGate widget that handles authentication state
+class AuthGate extends ConsumerWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+
+    return authState.when(
+      data: (user) {
+        // If user is signed in, show home screen
+        if (user != null) {
+          return const HomeScreen();
+        }
+        // If user is not signed in, show login screen
+        return const LoginScreen();
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) => Scaffold(
+        body: Center(
+          child: Text('Error: $error'),
+        ),
+      ),
     );
   }
 }

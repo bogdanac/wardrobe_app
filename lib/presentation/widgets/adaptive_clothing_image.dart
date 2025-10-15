@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
 
@@ -41,15 +42,40 @@ class AdaptiveClothingImage extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.zero,
         child: Padding(
           padding: _getPaddingForType(),
-          child: Image.file(
-            File(imagePath!),
-            fit: _getFitForType(),
-            errorBuilder: (context, error, stackTrace) => 
-                placeholder ?? _buildDefaultPlaceholder(),
-          ),
+          child: _buildImage(),
         ),
       ),
     );
+  }
+
+  Widget _buildImage() {
+    final path = imagePath!;
+    final isNetworkImage = path.startsWith('http://') || path.startsWith('https://');
+
+    if (isNetworkImage) {
+      // Use CachedNetworkImage for automatic offline caching
+      return CachedNetworkImage(
+        imageUrl: path,
+        fit: _getFitForType(),
+        placeholder: (context, url) => Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.pastelPink,
+          ),
+        ),
+        errorWidget: (context, url, error) =>
+            placeholder ?? _buildDefaultPlaceholder(),
+        // Image will be cached and available offline after first load
+        maxHeightDiskCache: 1000,
+        maxWidthDiskCache: 1000,
+      );
+    } else {
+      return Image.file(
+        File(path),
+        fit: _getFitForType(),
+        errorBuilder: (context, error, stackTrace) =>
+            placeholder ?? _buildDefaultPlaceholder(),
+      );
+    }
   }
 
   double _getOptimalHeight() {

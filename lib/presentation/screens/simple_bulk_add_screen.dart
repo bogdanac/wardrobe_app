@@ -369,7 +369,7 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
           imagePath: imagePath,
           colors: colors.map((color) => _imageService.colorToHex(color)).toList(),
           categories: const [],
-          season: _selectedSeason,
+          seasons: _selectedSeason != null ? [_selectedSeason!] : [],
           weatherRanges: const [],
           wearCount: 0,
           lastWornDate: null,

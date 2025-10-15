@@ -55,8 +55,8 @@ class WardrobeAnalyticsService {
       itemsByType[item.type] = (itemsByType[item.type] ?? 0) + 1;
       
       // Count by season
-      if (item.season != null) {
-        itemsBySeason[item.season!] = (itemsBySeason[item.season!] ?? 0) + 1;
+      for (final season in item.seasons) {
+        itemsBySeason[season] = (itemsBySeason[season] ?? 0) + 1;
       }
       
       // Count categories
@@ -143,9 +143,11 @@ class WardrobeAnalyticsService {
     if (wearFrequency >= 4) return UsageCategory.frequent;
     if (wearFrequency >= 2) return UsageCategory.regular;
     if (wearFrequency >= 0.5) return UsageCategory.occasional;
-    
+
     // Check if it's seasonal
-    if (item.season != null && item.season != Season.allSeason) {
+    if (item.seasons.isNotEmpty &&
+        !item.seasons.contains(Season.allSeason) &&
+        item.seasons.length <= 2) {
       return UsageCategory.seasonal;
     }
     
@@ -271,8 +273,8 @@ class WardrobeAnalyticsService {
     for (final season in Season.values) {
       if (season == Season.allSeason) continue;
       
-      final seasonItems = items.where((item) => 
-        item.season == season || item.season == Season.allSeason).toList();
+      final seasonItems = items.where((item) =>
+        item.seasons.contains(season) || item.seasons.contains(Season.allSeason)).toList();
       
       final wornItems = seasonItems.where((item) => item.wearCount > 0).length;
       final utilizationRate = seasonItems.isNotEmpty ? wornItems / seasonItems.length : 0.0;
@@ -513,8 +515,8 @@ class WardrobeAnalyticsService {
     
     // Seasonal recommendations
     final currentSeason = _getCurrentSeason();
-    final seasonalItems = items.where((item) => 
-      item.season == currentSeason || item.season == Season.allSeason).length;
+    final seasonalItems = items.where((item) =>
+      item.seasons.contains(currentSeason) || item.seasons.contains(Season.allSeason)).length;
     
     if (seasonalItems < 10) {
       recommendations.add(RecommendationInsight(

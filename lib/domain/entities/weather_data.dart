@@ -1,10 +1,5 @@
-import 'package:isar/isar.dart';
-
-part 'weather_data.g.dart';
-
-@collection
 class WeatherData {
-  Id id = Isar.autoIncrement;
+  String id;
   
   late double temperature;
   late double feelsLike;
@@ -29,8 +24,9 @@ class WeatherData {
   
   // Air quality (if available)
   int? airQualityIndex;
-  
+
   WeatherData({
+    String? id,
     required this.temperature,
     required this.feelsLike,
     required this.humidity,
@@ -46,7 +42,7 @@ class WeatherData {
     this.precipitationMm,
     this.precipitationChance,
     this.airQualityIndex,
-  });
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
   // Factory constructor from OpenWeatherMap current weather API
   factory WeatherData.fromCurrentWeatherJson(Map<String, dynamic> json) {
@@ -247,48 +243,67 @@ class WeatherData {
   }
 }
 
-@collection
 class WeatherLocation {
-  Id id = Isar.autoIncrement;
-  
-  late String name;
-  late double latitude;
-  late double longitude;
+  String id;
+  String name;
+  double latitude;
+  double longitude;
   String? country;
   String? region;
-  
-  bool isDefault = false;
-  bool isCurrentLocation = false;
-  
-  late DateTime createdAt;
+
+  bool isDefault;
+  bool isCurrentLocation;
+
+  DateTime createdAt;
   DateTime? lastUsed;
-  
-  WeatherLocation();
+
+  WeatherLocation({
+    String? id,
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    this.country,
+    this.region,
+    this.isDefault = false,
+    this.isCurrentLocation = false,
+    DateTime? createdAt,
+    this.lastUsed,
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+       createdAt = createdAt ?? DateTime.now();
 }
 
-@collection 
 class WeatherForecast {
-  Id id = Isar.autoIncrement;
-  
-  @Index()
-  late String locationId;
-  
-  late DateTime forecastDate;
-  late DateTime fetchedAt;
-  
+  String id;
+  String locationId;
+  DateTime forecastDate;
+  DateTime fetchedAt;
+
   // Daily summary
-  late double minTemperature;
-  late double maxTemperature;
-  late String condition;
-  late String description;
+  double minTemperature;
+  double maxTemperature;
+  String condition;
+  String description;
   String? iconCode;
-  
+
   // Hourly data (stored as JSON)
   String? hourlyDataJson;
-  
+
   // Precipitation
   double? precipitationChance;
   double? precipitationMm;
-  
-  WeatherForecast();
+
+  WeatherForecast({
+    String? id,
+    required this.locationId,
+    required this.forecastDate,
+    required this.fetchedAt,
+    required this.minTemperature,
+    required this.maxTemperature,
+    required this.condition,
+    required this.description,
+    this.iconCode,
+    this.hourlyDataJson,
+    this.precipitationChance,
+    this.precipitationMm,
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString();
 }

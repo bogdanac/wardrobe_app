@@ -126,7 +126,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
             showFavorites: false,
             showMetallicElements: true,
             selectedCategories: _selectedCategories,
-            selectedSeason: _selectedSeason,
+            selectedSeasons: [_selectedSeason],
             selectedWeatherRanges: _selectedWeatherRanges,
             selectedColors: _preferredColors,
             selectedTypes: const [],
@@ -137,9 +137,9 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
                 _selectedCategories = categories;
               });
             },
-            onSeasonChanged: (season) {
+            onSeasonsChanged: (seasons) {
               setState(() {
-                _selectedSeason = season ?? Season.allSeason;
+                _selectedSeason = seasons.isNotEmpty ? seasons.first : Season.allSeason;
               });
             },
             onWeatherChanged: (ranges) {

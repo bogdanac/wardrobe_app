@@ -84,7 +84,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     _notesController.text = outfit.notes ?? '';
     _selectedItemIds = List.from(outfit.clothingItemIds);
     _selectedCategories = List.from(outfit.categories);
-    _selectedSeason = outfit.season;
+    _selectedSeason = outfit.seasons.isNotEmpty ? outfit.seasons.first : null;
     _selectedWeatherRanges = List.from(outfit.weatherRanges);
     _isFavorite = outfit.isFavorite;
   }
@@ -321,7 +321,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
           if (_filterTypes.isNotEmpty && !_filterTypes.contains(item.type)) {
             return false;
           }
-          if (_filterSeason != null && item.season != _filterSeason) {
+          if (_filterSeason != null && !item.seasons.contains(_filterSeason)) {
             return false;
           }
           if (_filterColors.isNotEmpty) {
@@ -607,7 +607,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isSuggested) ...[
-                    Icon(
+                    const Icon(
                       Icons.star,
                       size: 12,
                       color: Colors.white,
@@ -993,7 +993,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         name: _nameController.text.trim(),
         clothingItemIds: _selectedItemIds,
         categories: _selectedCategories,
-        season: _selectedSeason,
+        seasons: _selectedSeason != null ? [_selectedSeason!] : [],
         weatherRanges: _selectedWeatherRanges,
         wearCount: widget.outfit?.wearCount ?? 0,
         lastWornDate: widget.outfit?.lastWornDate,

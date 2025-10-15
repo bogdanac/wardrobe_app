@@ -12,7 +12,20 @@
           "package_name": "com.wardrobeapp.wardrobe_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "259011580425-ngk92dj5dqvrbn1ieu6quv4pf89rikcv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wardrobeapp.wardrobe_app",
+            "certificate_hash": "1a74132850a0b0b4844614c4d4992c618fc7c4b5"
+          }
+        },
+        {
+          "client_id": "259011580425-q9qv0vl5dsco10rgg6p0kk6o4gto6qen.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAG3VWrSXe5FWrlir-38f_fxgmbwY9PPw0"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "259011580425-q9qv0vl5dsco10rgg6p0kk6o4gto6qen.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

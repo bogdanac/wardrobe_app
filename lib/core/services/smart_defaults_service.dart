@@ -174,8 +174,10 @@ class SmartDefaultsService {
     final seasonVotes = <Season, int>{};
 
     for (final item in items) {
-      if (item.season != null && item.season != Season.allSeason) {
-        seasonVotes[item.season!] = (seasonVotes[item.season!] ?? 0) + 1;
+      for (final season in item.seasons) {
+        if (season != Season.allSeason) {
+          seasonVotes[season] = (seasonVotes[season] ?? 0) + 1;
+        }
       }
 
       // Infer season from weather ranges

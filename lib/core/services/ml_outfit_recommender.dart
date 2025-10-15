@@ -463,18 +463,18 @@ class MLOutfitRecommender {
 
   /// Calculate season appropriateness score
   double _calculateSeasonScore(ClothingItem item, Season? season) {
-    if (season == null || item.season == null) return 0.5;
-    
-    if (item.season == season || item.season == Season.allSeason) {
+    if (season == null || item.seasons.isEmpty) return 0.5;
+
+    if (item.seasons.contains(season) || item.seasons.contains(Season.allSeason)) {
       return 1.0;
     }
-    
+
     // Adjacent seasons get partial credit
     final adjacentSeasons = _getAdjacentSeasons(season);
-    if (adjacentSeasons.contains(item.season)) {
+    if (item.seasons.any((s) => adjacentSeasons.contains(s))) {
       return 0.7;
     }
-    
+
     return 0.2;
   }
 
@@ -712,7 +712,7 @@ class MLOutfitRecommender {
 
     if (context.season != null && items.isNotEmpty) {
       final seasonAppropriate = items.where((item) =>
-        item.season == context.season || item.season == Season.allSeason).length;
+        item.seasons.contains(context.season) || item.seasons.contains(Season.allSeason)).length;
       score += (seasonAppropriate / items.length) * 0.3;
     }
 

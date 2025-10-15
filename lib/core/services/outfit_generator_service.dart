@@ -2,14 +2,12 @@ import 'dart:math';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
 import '../../domain/repositories/clothing_repository.dart';
-import 'ml_feedback_service.dart';
 
 class OutfitGeneratorService {
   final ClothingRepository _clothingRepository;
-  final MLFeedbackService _mlFeedbackService;
   final Random _random = Random();
 
-  OutfitGeneratorService(this._clothingRepository) : _mlFeedbackService = MLFeedbackService();
+  OutfitGeneratorService(this._clothingRepository);
 
   Future<Outfit?> generateRandomOutfit({
     List<String>? categories,
@@ -80,7 +78,7 @@ class OutfitGeneratorService {
         name: 'Generated Outfit ${DateTime.now().day}/${DateTime.now().month}',
         clothingItemIds: outfitItems.map((item) => item.id).toList(),
         categories: categories ?? [],
-        season: season,
+        seasons: season != null ? [season] : [],
         weatherRanges: weatherRanges ?? [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -274,129 +272,5 @@ class OutfitGeneratorService {
     }
 
     return outfits;
-  }
-
-  Future<Outfit?> generateMLEnhancedOutfit({
-    List<String>? categories,
-    Season? season,
-    List<WeatherRange>? weatherRanges,
-  }) async {
-    try {
-      final allItems = await _clothingRepository.filterClothingItems(
-        categories: categories,
-        season: season,
-        weatherRanges: weatherRanges,
-      );
-
-      if (allItems.isEmpty) return null;
-
-      final outfitItems = <ClothingItem>[];
-      final usedTypes = <ClothingType>{};
-
-      final itemsByType = _groupItemsByType(allItems);
-      final requiredTypes = _getRequiredTypes();
-      
-      for (final type in requiredTypes) {
-        final availableItems = itemsByType[type];
-        if (availableItems != null && availableItems.isNotEmpty) {
-          final recommendedItems = await _mlFeedbackService.getRecommendedItems(
-            type: type,
-            existingItems: outfitItems,
-            limit: 5,
-          );
-          
-          final typeItems = availableItems.where((item) => 
-            recommendedItems.any((rec) => rec.id == item.id)).toList();
-          
-          if (typeItems.isNotEmpty) {
-            final selectedItem = typeItems.first;
-            outfitItems.add(selectedItem);
-            usedTypes.add(type);
-          } else if (availableItems.isNotEmpty) {
-            final selectedItem = _selectCompatibleItem(
-              availableItems,
-              outfitItems,
-              null,
-              null,
-            );
-            if (selectedItem != null) {
-              outfitItems.add(selectedItem);
-              usedTypes.add(type);
-            }
-          }
-        }
-      }
-
-      final optionalTypes = _getOptionalTypes();
-      for (final type in optionalTypes) {
-        if (usedTypes.contains(type)) continue;
-        if (_random.nextBool()) {
-          final availableItems = itemsByType[type];
-          if (availableItems != null && availableItems.isNotEmpty) {
-            final recommendedItems = await _mlFeedbackService.getRecommendedItems(
-              type: type,
-              existingItems: outfitItems,
-              limit: 3,
-            );
-            
-            final typeItems = availableItems.where((item) => 
-              recommendedItems.any((rec) => rec.id == item.id)).toList();
-            
-            if (typeItems.isNotEmpty) {
-              outfitItems.add(typeItems.first);
-            }
-          }
-        }
-      }
-
-      if (outfitItems.isEmpty) return null;
-
-      final outfit = Outfit(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: 'AI-Recommended Outfit ${DateTime.now().day}/${DateTime.now().month}',
-        clothingItemIds: outfitItems.map((item) => item.id).toList(),
-        categories: categories ?? [],
-        season: season,
-        weatherRanges: weatherRanges ?? [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        tags: const ['ai-generated', 'recommended'],
-      );
-
-      return outfit;
-    } catch (e) {
-      throw Exception('Failed to generate ML-enhanced outfit: $e');
-    }
-  }
-
-  Future<List<Outfit>> generateMLRankedOutfits({
-    required int count,
-    List<String>? categories,
-    Season? season,
-    List<WeatherRange>? weatherRanges,
-  }) async {
-    final candidates = await generateMultipleOutfits(
-      count: count * 2,
-      categories: categories,
-      season: season,
-      weatherRanges: weatherRanges,
-    );
-
-    final scoredOutfits = <MapEntry<Outfit, double>>[];
-
-    for (final outfit in candidates) {
-      final score = await _mlFeedbackService.calculateOutfitScore(outfit);
-      scoredOutfits.add(MapEntry(outfit, score));
-    }
-
-    scoredOutfits.sort((a, b) => b.value.compareTo(a.value));
-
-    return scoredOutfits
-        .take(count)
-        .map((entry) => entry.key.copyWith(
-          name: '${entry.key.name} (${(entry.value * 100).round()}% match)',
-          tags: [...entry.key.tags, 'ai-ranked'],
-        ))
-        .toList();
   }
 }

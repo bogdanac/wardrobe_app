@@ -75,8 +75,8 @@ final wardrobeStatsProvider = FutureProvider<WardrobeStats>((ref) async {
   // Seasonal distribution
   final seasonalDistribution = <Season, int>{};
   for (final item in allItems) {
-    if (item.season != null) {
-      seasonalDistribution[item.season!] = (seasonalDistribution[item.season!] ?? 0) + 1;
+    for (final season in item.seasons) {
+      seasonalDistribution[season] = (seasonalDistribution[season] ?? 0) + 1;
     }
   }
 

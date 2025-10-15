@@ -47,38 +47,6 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
           ),
         ],
       ),
-      floatingActionButton: _isSelectionMode
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: "bulk_add",
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SimpleBulkAddScreen(),
-                    ),
-                  ),
-                  backgroundColor: AppTheme.primaryWhite,
-                  foregroundColor: AppTheme.primaryBlack,
-                  child: const Icon(Icons.photo_library),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: "single_add",
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddClothingItemScreen(),
-                    ),
-                  ),
-                  backgroundColor: AppTheme.pastelPink,
-                  foregroundColor: AppTheme.primaryBlack,
-                  child: const Icon(Icons.add),
-                ),
-              ],
-            ),
     );
   }
 
@@ -168,13 +136,11 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
   }
 
   void _onItemLongPress(ClothingItem item) {
-    print('Long press detected on item: ${item.id}');
     if (!_isSelectionMode) {
       setState(() {
         _isSelectionMode = true;
         _selectedItems.add(item.id);
       });
-      print('Selection mode activated');
     }
   }
 

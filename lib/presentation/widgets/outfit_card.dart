@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/entities/outfit.dart';
 import '../../core/themes/app_theme.dart';
 import '../providers/clothing_provider.dart';
@@ -50,12 +51,7 @@ class OutfitCard extends ConsumerWidget {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
-                        child: Image.file(
-                          File(outfit.imagePreviewPath!),
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPlaceholder(ref),
-                        ),
+                        child: _buildOutfitImage(outfit.imagePreviewPath!, ref),
                       )
                     : _buildPlaceholder(ref),
               ),
@@ -191,19 +187,7 @@ class OutfitCard extends ConsumerWidget {
             if (item?.imagePath != null) {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: Image.file(
-                  File(item!.imagePath!),
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Container(
-                        color: AppTheme.lightGray,
-                        child: const Icon(
-                          Icons.checkroom,
-                          color: AppTheme.mediumGray,
-                          size: 20,
-                        ),
-                      ),
-                ),
+                child: _buildClothingItemImage(item!.imagePath!),
               );
             }
             return Container(
@@ -239,6 +223,75 @@ class OutfitCard extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Widget _buildOutfitImage(String imagePath, WidgetRef ref) {
+    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
+    if (isNetworkImage) {
+      return CachedNetworkImage(
+        imageUrl: imagePath,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.pastelPink,
+          ),
+        ),
+        errorWidget: (context, url, error) => _buildPlaceholder(ref),
+        maxHeightDiskCache: 1000,
+        maxWidthDiskCache: 1000,
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(ref),
+      );
+    }
+  }
+
+  Widget _buildClothingItemImage(String imagePath) {
+    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
+    if (isNetworkImage) {
+      return CachedNetworkImage(
+        imageUrl: imagePath,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => Container(
+          color: AppTheme.lightGray,
+          child: const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          color: AppTheme.lightGray,
+          child: const Icon(
+            Icons.checkroom,
+            color: AppTheme.mediumGray,
+            size: 20,
+          ),
+        ),
+        maxHeightDiskCache: 500,
+        maxWidthDiskCache: 500,
+      );
+    } else {
+      return Image.file(
+        File(imagePath),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: AppTheme.lightGray,
+          child: const Icon(
+            Icons.checkroom,
+            color: AppTheme.mediumGray,
+            size: 20,
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildCategories() {

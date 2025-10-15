@@ -36,15 +36,6 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const CreateOutfitScreen(),
-          ),
-        ),
-        child: const Icon(Icons.add),
-      ),
     );
   }
 

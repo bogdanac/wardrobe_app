@@ -52,7 +52,7 @@ class ClothingItem extends Equatable {
   final List<String> additionalImages; // Additional images without processing
   final List<String> colors;
   final List<String> categories;
-  final Season? season;
+  final List<Season> seasons;
   final List<WeatherRange> weatherRanges;
   final int wearCount;
   final DateTime? lastWornDate;
@@ -73,7 +73,7 @@ class ClothingItem extends Equatable {
     this.additionalImages = const [],
     this.colors = const [],
     this.categories = const [],
-    this.season,
+    this.seasons = const [],
     this.weatherRanges = const [],
     this.wearCount = 0,
     this.lastWornDate,
@@ -95,7 +95,7 @@ class ClothingItem extends Equatable {
     List<String>? additionalImages,
     List<String>? colors,
     List<String>? categories,
-    Season? season,
+    List<Season>? seasons,
     List<WeatherRange>? weatherRanges,
     int? wearCount,
     DateTime? lastWornDate,
@@ -116,7 +116,7 @@ class ClothingItem extends Equatable {
       additionalImages: additionalImages ?? this.additionalImages,
       colors: colors ?? this.colors,
       categories: categories ?? this.categories,
-      season: season ?? this.season,
+      seasons: seasons ?? this.seasons,
       weatherRanges: weatherRanges ?? this.weatherRanges,
       wearCount: wearCount ?? this.wearCount,
       lastWornDate: lastWornDate ?? this.lastWornDate,
@@ -140,7 +140,7 @@ class ClothingItem extends Equatable {
         additionalImages,
         colors,
         categories,
-        season,
+        seasons,
         weatherRanges,
         wearCount,
         lastWornDate,

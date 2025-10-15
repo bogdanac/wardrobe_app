@@ -13,14 +13,14 @@ class UnifiedFilters extends ConsumerStatefulWidget {
   final bool showFavorites;
   final bool showMetallicElements;
   final List<String> selectedCategories;
-  final Season? selectedSeason;
+  final List<Season> selectedSeasons;
   final List<WeatherRange> selectedWeatherRanges;
   final List<String> selectedColors;
   final List<ClothingType> selectedTypes;
   final bool? selectedFavorites;
   final MetallicElements? selectedMetallicElements;
   final Function(List<String>) onCategoriesChanged;
-  final Function(Season?) onSeasonChanged;
+  final Function(List<Season>) onSeasonsChanged;
   final Function(List<WeatherRange>) onWeatherChanged;
   final Function(List<String>) onColorsChanged;
   final Function(List<ClothingType>) onTypesChanged;
@@ -37,14 +37,14 @@ class UnifiedFilters extends ConsumerStatefulWidget {
     this.showFavorites = false,
     this.showMetallicElements = false,
     required this.selectedCategories,
-    this.selectedSeason,
+    this.selectedSeasons = const [],
     required this.selectedWeatherRanges,
     this.selectedColors = const [],
     this.selectedTypes = const [],
     this.selectedFavorites,
     this.selectedMetallicElements,
     required this.onCategoriesChanged,
-    required this.onSeasonChanged,
+    required this.onSeasonsChanged,
     required this.onWeatherChanged,
     required this.onColorsChanged,
     required this.onTypesChanged,
@@ -191,7 +191,7 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Season',
+          'Seasons',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -202,8 +202,8 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
           spacing: 4,
           runSpacing: 0,
           children: Season.values.map((season) {
-            final isSelected = widget.selectedSeason == season;
-            return ChoiceChip(
+            final isSelected = widget.selectedSeasons.contains(season);
+            return FilterChip(
               label: Text(_getSeasonLabel(season)),
               selected: isSelected,
               selectedColor: _getSeasonColor(season),
@@ -213,7 +213,13 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
                 color: Colors.white,
               ),
               onSelected: (selected) {
-                widget.onSeasonChanged(season);
+                final newSeasons = List<Season>.from(widget.selectedSeasons);
+                if (selected) {
+                  newSeasons.add(season);
+                } else {
+                  newSeasons.remove(season);
+                }
+                widget.onSeasonsChanged(newSeasons);
               },
             );
           }).toList(),

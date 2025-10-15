@@ -60,7 +60,6 @@ class FirebaseImageService {
       final ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } catch (e) {
-      print('Error deleting image: $e');
       // Image might already be deleted or URL is invalid
     }
   }
@@ -78,7 +77,6 @@ class FirebaseImageService {
       final ref = _storage.refFromURL(imageUrl);
       return await ref.getMetadata();
     } catch (e) {
-      print('Error getting image metadata: $e');
       return null;
     }
   }
@@ -158,7 +156,6 @@ class FirebaseImageService {
       }
       return urls;
     } catch (e) {
-      print('Error listing images: $e');
       return [];
     }
   }
@@ -176,7 +173,6 @@ class FirebaseImageService {
       }
       return totalSize;
     } catch (e) {
-      print('Error calculating storage usage: $e');
       return 0;
     }
   }

@@ -6,7 +6,7 @@ class Outfit extends Equatable {
   final String name;
   final List<String> clothingItemIds;
   final List<String> categories;
-  final Season? season;
+  final List<Season> seasons;
   final List<WeatherRange> weatherRanges;
   final int wearCount;
   final DateTime? lastWornDate;
@@ -24,7 +24,7 @@ class Outfit extends Equatable {
     required this.name,
     this.clothingItemIds = const [],
     this.categories = const [],
-    this.season,
+    this.seasons = const [],
     this.weatherRanges = const [],
     this.wearCount = 0,
     this.lastWornDate,
@@ -43,7 +43,7 @@ class Outfit extends Equatable {
     String? name,
     List<String>? clothingItemIds,
     List<String>? categories,
-    Season? season,
+    List<Season>? seasons,
     List<WeatherRange>? weatherRanges,
     int? wearCount,
     DateTime? lastWornDate,
@@ -61,7 +61,7 @@ class Outfit extends Equatable {
       name: name ?? this.name,
       clothingItemIds: clothingItemIds ?? this.clothingItemIds,
       categories: categories ?? this.categories,
-      season: season ?? this.season,
+      seasons: seasons ?? this.seasons,
       weatherRanges: weatherRanges ?? this.weatherRanges,
       wearCount: wearCount ?? this.wearCount,
       lastWornDate: lastWornDate ?? this.lastWornDate,
@@ -82,7 +82,7 @@ class Outfit extends Equatable {
         name,
         clothingItemIds,
         categories,
-        season,
+        seasons,
         weatherRanges,
         wearCount,
         lastWornDate,
