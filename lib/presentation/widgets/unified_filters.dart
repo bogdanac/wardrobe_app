@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/clothing_item.dart';
-import '../../core/utils/category_colors.dart';
+import '../../core/constants/category_constants.dart';
+import '../providers/category_provider.dart';
 
 class UnifiedFilters extends ConsumerStatefulWidget {
   final bool showCategories;
@@ -57,38 +57,12 @@ class UnifiedFilters extends ConsumerStatefulWidget {
 }
 
 class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
-  List<String> _allCategories = [];
   List<String> _wardrobeColors = [];
-  static const String _customCategoriesKey = 'custom_style_categories';
 
   @override
   void initState() {
     super.initState();
-    if (widget.showCategories) _loadCategories();
     if (widget.showColors) _loadWardrobeColors();
-  }
-
-  Future<void> _loadCategories() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> savedCategories = prefs.getStringList(_customCategoriesKey) ?? [];
-    
-    if (savedCategories.isEmpty) {
-      savedCategories = [
-        'brunch with the girls',
-        'period safe',
-        'mall/errands',
-        'work',
-        'elegant',
-        'classy events',
-        'festivals',
-        'romantic dates',
-        'comfortable',
-      ];
-    }
-    
-    setState(() {
-      _allCategories = savedCategories;
-    });
   }
 
   Future<void> _loadWardrobeColors() async {
@@ -144,45 +118,87 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
   }
 
   Widget _buildCategoryFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Style Categories',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: _allCategories.map((category) {
-            final isSelected = widget.selectedCategories.contains(category);
-            final baseColor = CategoryColors.getCategoryColor(category);
-            return FilterChip(
-              label: Text(category),
-              selected: isSelected,
-              selectedColor: baseColor,
-              backgroundColor: baseColor.withValues(alpha: 0.9),
-              side: BorderSide.none,
-              labelStyle: const TextStyle(
-                color: Colors.white,
+    final categoriesAsync = ref.watch(allCategoriesProvider);
+
+    return categoriesAsync.when(
+      data: (categories) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Style Categories',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
-              onSelected: (selected) {
-                final newCategories = List<String>.from(widget.selectedCategories);
-                if (selected) {
-                  newCategories.add(category);
-                } else {
-                  newCategories.remove(category);
-                }
-                widget.onCategoriesChanged(newCategories);
-              },
-            );
-          }).toList(),
-        ),
-      ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 0,
+              children: categories.map((category) {
+                final isSelected = widget.selectedCategories.contains(category.name);
+                final description = category.description ?? DefaultCategories.getDescription(category.name);
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FilterChip(
+                      label: Text(category.name),
+                      selected: isSelected,
+                      selectedColor: category.color,
+                      backgroundColor: category.color.withValues(alpha: 0.9),
+                      side: BorderSide.none,
+                      labelStyle: const TextStyle(
+                        color: Colors.white,
+                      ),
+                      onSelected: (selected) {
+                        final newCategories = List<String>.from(widget.selectedCategories);
+                        if (selected) {
+                          newCategories.add(category.name);
+                        } else {
+                          newCategories.remove(category.name);
+                        }
+                        widget.onCategoriesChanged(newCategories);
+                      },
+                    ),
+                    if (description != null && description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  description,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.black,
+                                duration: const Duration(seconds: 3),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          child: Tooltip(
+                            message: description,
+                            preferBelow: false,
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (_, __) => const Text('Error loading categories'),
     );
   }
 

@@ -11,6 +11,7 @@ abstract class OutfitRepository {
   Future<List<Outfit>> searchOutfits(String query);
   Future<List<Outfit>> filterOutfits({
     List<String>? categories,
+    List<String>? outfitStyles,
     Season? season,
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,

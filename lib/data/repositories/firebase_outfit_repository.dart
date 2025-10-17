@@ -22,7 +22,8 @@ class FirebaseOutfitRepository implements OutfitRepository {
       'name': outfit.name,
       'clothingItemIds': outfit.clothingItemIds,
       'imagePreviewPath': outfit.imagePreviewPath,
-      'categories': outfit.categories,
+      'categories': outfit.categories, // Deprecated: use outfitStyles instead
+      'outfitStyles': outfit.outfitStyles,
       'seasons': outfit.seasons.map((e) => e.name).toList(),
       'weatherRanges': outfit.weatherRanges.map((e) => e.name).toList(),
       'isFavorite': outfit.isFavorite,
@@ -45,7 +46,8 @@ class FirebaseOutfitRepository implements OutfitRepository {
       name: data['name'] as String,
       clothingItemIds: (data['clothingItemIds'] as List?)?.cast<String>() ?? [],
       imagePreviewPath: data['imagePreviewPath'] as String?,
-      categories: (data['categories'] as List?)?.cast<String>() ?? [],
+      categories: (data['categories'] as List?)?.cast<String>() ?? [], // Deprecated: use outfitStyles instead
+      outfitStyles: (data['outfitStyles'] as List?)?.cast<String>() ?? [],
       seasons: (data['seasons'] as List?)
           ?.map((e) => Season.values.firstWhere((s) => s.name == e))
           .toList() ?? [],
@@ -127,6 +129,7 @@ class FirebaseOutfitRepository implements OutfitRepository {
   @override
   Future<List<Outfit>> filterOutfits({
     List<String>? categories,
+    List<String>? outfitStyles,
     Season? season,
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
@@ -149,6 +152,11 @@ class FirebaseOutfitRepository implements OutfitRepository {
     if (categories != null && categories.isNotEmpty) {
       outfits = outfits.where((outfit) =>
           outfit.categories.any((cat) => categories.contains(cat))).toList();
+    }
+
+    if (outfitStyles != null && outfitStyles.isNotEmpty) {
+      outfits = outfits.where((outfit) =>
+          outfit.outfitStyles.any((style) => outfitStyles.contains(style))).toList();
     }
 
     if (weatherRanges != null && weatherRanges.isNotEmpty) {
