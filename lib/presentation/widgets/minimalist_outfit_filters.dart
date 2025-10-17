@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
+import '../providers/outfit_style_provider.dart';
 
-class MinimalistOutfitFilters extends ConsumerWidget {
+class MinimalistOutfitFilters extends ConsumerStatefulWidget {
   final List<String> selectedCategories;
   final Season? selectedSeason;
   final bool? selectedFavorites;
@@ -22,7 +23,12 @@ class MinimalistOutfitFilters extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MinimalistOutfitFilters> createState() => _MinimalistOutfitFiltersState();
+}
+
+class _MinimalistOutfitFiltersState extends ConsumerState<MinimalistOutfitFilters> {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -44,48 +50,83 @@ class MinimalistOutfitFilters extends ConsumerWidget {
   }
 
   Widget _buildCategoryDropdown() {
-    final quickCategories = [
-      'work',
-      'casual',
-      'elegant',
-      'date night',
-      'comfortable',
-      'formal',
-      'sporty',
-      'party',
-    ];
+    final outfitStylesAsync = ref.watch(allOutfitStylesProvider);
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonFormField<String?>(
-        decoration: const InputDecoration(
-          labelText: 'Category',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          labelStyle: TextStyle(fontSize: 12),
-        ),
-        initialValue: selectedCategories.isEmpty ? null : selectedCategories.first,
-        isExpanded: true,
-        items: [
-          const DropdownMenuItem<String?>(
-            value: null,
-            child: Text('All Categories', style: TextStyle(fontSize: 12)),
+    return outfitStylesAsync.when(
+      data: (outfitStyles) {
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(8),
           ),
-          ...quickCategories.map((category) => DropdownMenuItem<String?>(
-            value: category,
-            child: Text(category.capitalize(), style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )),
-        ],
-        onChanged: (String? value) {
-          if (value == null) {
-            onCategoriesChanged([]);
-          } else {
-            onCategoriesChanged([value]);
-          }
-        },
+          child: DropdownButtonFormField<String?>(
+            decoration: const InputDecoration(
+              labelText: 'Outfit Style',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              labelStyle: TextStyle(fontSize: 12),
+            ),
+            value: widget.selectedCategories.isEmpty ? null : widget.selectedCategories.first,
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All Styles', style: TextStyle(fontSize: 12)),
+              ),
+              ...outfitStyles.map((style) => DropdownMenuItem<String?>(
+                value: style.name,
+                child: Row(
+                  children: [
+                    Icon(
+                      style.icon ?? Icons.style,
+                      size: 14,
+                      color: style.color,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        style.name.capitalize(),
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+            onChanged: (String? value) {
+              if (value == null) {
+                widget.onCategoriesChanged([]);
+              } else {
+                widget.onCategoriesChanged([value]);
+              }
+            },
+          ),
+        );
+      },
+      loading: () => Container(
+        height: 50,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (error, stack) => Container(
+        height: 50,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Center(
+          child: Text('Error loading styles', style: TextStyle(fontSize: 12)),
+        ),
       ),
     );
   }
@@ -103,7 +144,7 @@ class MinimalistOutfitFilters extends ConsumerWidget {
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           labelStyle: TextStyle(fontSize: 12),
         ),
-        initialValue: selectedSeason,
+        initialValue: widget.selectedSeason,
         isExpanded: true,
         items: [
           const DropdownMenuItem<Season?>(
@@ -135,7 +176,7 @@ class MinimalistOutfitFilters extends ConsumerWidget {
           )),
         ],
         onChanged: (Season? value) {
-          onSeasonChanged(value);
+          widget.onSeasonChanged(value);
         },
       ),
     );
@@ -154,7 +195,7 @@ class MinimalistOutfitFilters extends ConsumerWidget {
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           labelStyle: TextStyle(fontSize: 12),
         ),
-        initialValue: selectedFavorites,
+        initialValue: widget.selectedFavorites,
         isExpanded: true,
         items: [
           const DropdownMenuItem<bool?>(
@@ -192,7 +233,7 @@ class MinimalistOutfitFilters extends ConsumerWidget {
           ),
         ],
         onChanged: (bool? value) {
-          onFavoritesChanged(value);
+          widget.onFavoritesChanged(value);
         },
       ),
     );

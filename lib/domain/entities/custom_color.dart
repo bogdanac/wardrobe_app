@@ -1,59 +1,68 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
-class Category extends Equatable {
+enum ColorSection {
+  neutrals,
+  pastels,
+  accents,
+}
+
+class CustomColor extends Equatable {
   final String id;
   final String name;
-  final Color color;
+  final String hex;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? description;
-  final IconData? icon;
-  final int order;
+  final int order; // For maintaining order in the list
+  final ColorSection section; // Category: neutrals, pastels, or accents
 
-  const Category({
+  const CustomColor({
     required this.id,
     required this.name,
-    required this.color,
+    required this.hex,
     required this.createdAt,
     required this.updatedAt,
-    this.description,
-    this.icon,
-    this.order = 0,
+    required this.order,
+    this.section = ColorSection.accents,
   });
 
-  Category copyWith({
+  CustomColor copyWith({
     String? id,
     String? name,
-    Color? color,
+    String? hex,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? description,
-    IconData? icon,
     int? order,
+    ColorSection? section,
   }) {
-    return Category(
+    return CustomColor(
       id: id ?? this.id,
       name: name ?? this.name,
-      color: color ?? this.color,
+      hex: hex ?? this.hex,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      description: description ?? this.description,
-      icon: icon ?? this.icon,
       order: order ?? this.order,
+      section: section ?? this.section,
     );
+  }
+
+  Color get color {
+    try {
+      return Color(int.parse(hex.substring(1), radix: 16) + 0xFF000000);
+    } catch (e) {
+      return Colors.grey;
+    }
   }
 
   @override
   List<Object?> get props => [
         id,
         name,
-        color,
+        hex,
         createdAt,
         updatedAt,
-        description,
-        icon,
         order,
+        section,
       ];
 
   /// Convert to JSON for Firebase storage
@@ -61,28 +70,29 @@ class Category extends Equatable {
     return {
       'id': id,
       'name': name,
-      'color': color.value,
+      'hex': hex,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'description': description,
-      'icon': icon?.codePoint,
       'order': order,
+      'section': section.name,
     };
   }
 
   /// Create from JSON (Firebase)
-  factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
+  factory CustomColor.fromJson(Map<String, dynamic> json) {
+    return CustomColor(
       id: json['id'] as String,
       name: json['name'] as String,
-      color: Color(json['color'] as int),
+      hex: json['hex'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
-      description: json['description'] as String?,
-      icon: json['icon'] != null
-          ? IconData(json['icon'] as int, fontFamily: 'MaterialIcons')
-          : null,
       order: json['order'] as int? ?? 0,
+      section: json['section'] != null
+          ? ColorSection.values.firstWhere(
+              (s) => s.name == json['section'],
+              orElse: () => ColorSection.neutrals,
+            )
+          : ColorSection.neutrals, // Default to neutrals for migration - user will manually organize
     );
   }
 }

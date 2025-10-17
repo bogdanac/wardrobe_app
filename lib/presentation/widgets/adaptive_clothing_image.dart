@@ -57,7 +57,7 @@ class AdaptiveClothingImage extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: path,
         fit: _getFitForType(),
-        placeholder: (context, url) => Center(
+        placeholder: (context, url) => const Center(
           child: CircularProgressIndicator(
             color: AppTheme.pastelPink,
           ),
@@ -96,15 +96,19 @@ class AdaptiveClothingImage extends StatelessWidget {
   }
 
   EdgeInsets _getPaddingForType() {
-    if (type == null) return const EdgeInsets.all(8);
+    if (type == null) return const EdgeInsets.all(4);
 
     switch (type!) {
+      case ClothingType.top:
+        return const EdgeInsets.fromLTRB(4, 4, 4, 0); // Less bottom padding for tops
+      case ClothingType.shoes:
+        return const EdgeInsets.fromLTRB(4, 0, 4, 4); // Less top padding for shoes
       case ClothingType.accessory:
-        return const EdgeInsets.all(16); // More padding for small items
+        return const EdgeInsets.fromLTRB(8, 2, 8, 8); // Less top padding for accessories
       case ClothingType.dress:
-        return const EdgeInsets.symmetric(horizontal: 8, vertical: 4); // Less vertical padding for long items
+        return const EdgeInsets.symmetric(horizontal: 4, vertical: 2); // Less vertical padding for long items
       default:
-        return const EdgeInsets.all(8);
+        return const EdgeInsets.all(4);
     }
   }
 
@@ -140,9 +144,9 @@ class AdaptiveClothingImage extends StatelessWidget {
       case ClothingType.top:
         return Icons.checkroom;
       case ClothingType.bottom:
-        return Icons.checkroom_outlined;
+        return Icons.straighten;
       case ClothingType.dress:
-        return Icons.checkroom;
+        return Icons.woman;
       case ClothingType.shoes:
         return Icons.sports_soccer;
       case ClothingType.accessory:

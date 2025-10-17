@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import '../../core/services/image_service.dart';
 import '../../core/themes/app_theme.dart';
+import '../providers/custom_color_provider.dart';
 import 'add_clothing_item_screen.dart';
 
 class BulkAddClothingScreen extends ConsumerStatefulWidget {
@@ -609,9 +610,10 @@ class _BulkAddClothingScreenState extends ConsumerState<BulkAddClothingScreen> {
     try {
       // Process background removal
       final processedImage = await _imageService.removeBackground(item.originalImage);
-      
+
       // Extract colors
-      final colors = await _imageService.extractColors(processedImage, maxColors: 3);
+      final customColorRepository = ref.read(customColorRepositoryProvider);
+      final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 3);
       
       setState(() {
         item.processedImage = processedImage;

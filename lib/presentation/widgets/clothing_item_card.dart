@@ -17,21 +17,24 @@ class ClothingItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: isSelected ? 6 : 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isSelected
-            ? const BorderSide(color: AppTheme.pastelPink, width: 2)
-            : BorderSide.none,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: AdaptiveClothingImage(
-          imagePath: item.imagePath,
-          type: item.type,
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: isSelected ? 6 : 0,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          placeholder: _buildPlaceholder(),
+          side: isSelected
+              ? const BorderSide(color: AppTheme.pastelPink, width: 2)
+              : BorderSide.none,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AdaptiveClothingImage(
+            imagePath: item.imagePath,
+            type: item.type,
+            borderRadius: BorderRadius.circular(12),
+            placeholder: _buildPlaceholder(),
+          ),
         ),
       ),
     );
@@ -52,9 +55,9 @@ class ClothingItemCard extends StatelessWidget {
       case ClothingType.top:
         return Icons.checkroom;
       case ClothingType.bottom:
-        return Icons.compress;
+        return Icons.straighten;
       case ClothingType.dress:
-        return Icons.weekend;
+        return Icons.woman;
       case ClothingType.shoes:
         return Icons.elevator_rounded;
       case ClothingType.bag:

@@ -232,7 +232,7 @@ class OutfitCard extends ConsumerWidget {
       return CachedNetworkImage(
         imageUrl: imagePath,
         fit: BoxFit.contain,
-        placeholder: (context, url) => Center(
+        placeholder: (context, url) => const Center(
           child: CircularProgressIndicator(
             color: AppTheme.pastelPink,
           ),

@@ -160,9 +160,11 @@ class FirebaseClothingRepository implements ClothingRepository {
     final snapshot = await query.get();
     var items = snapshot.docs.map(_fromFirestore).toList();
 
-    // Client-side season filtering
+    // Client-side season filtering - include items with allSeason
     if (season != null) {
-      items = items.where((item) => item.seasons.contains(season)).toList();
+      items = items.where((item) =>
+        item.seasons.contains(season) || item.seasons.contains(Season.allSeason)
+      ).toList();
     }
 
     // Client-side filtering for complex queries

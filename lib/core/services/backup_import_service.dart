@@ -5,17 +5,29 @@ import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
+import '../../domain/entities/category.dart';
+import '../../domain/entities/custom_color.dart';
+import '../../domain/entities/outfit_style.dart';
 import '../../domain/repositories/clothing_repository.dart';
 import '../../domain/repositories/outfit_repository.dart';
+import '../../domain/repositories/category_repository.dart';
+import '../../domain/repositories/custom_color_repository.dart';
+import '../../domain/repositories/outfit_style_repository.dart';
 
 class BackupImportService {
   final ClothingRepository _clothingRepository;
   final OutfitRepository _outfitRepository;
+  final CategoryRepository _categoryRepository;
+  final CustomColorRepository _customColorRepository;
+  final OutfitStyleRepository _outfitStyleRepository;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   BackupImportService(
     this._clothingRepository,
     this._outfitRepository,
+    this._categoryRepository,
+    this._customColorRepository,
+    this._outfitStyleRepository,
   );
 
   /// Import complete backup from JSON and ZIP files
@@ -62,10 +74,61 @@ class BackupImportService {
 
       int itemsImported = 0;
       int outfitsImported = 0;
+      int categoriesImported = 0;
+      int customColorsImported = 0;
+      int outfitStylesImported = 0;
       int imagesUploaded = 0;
       final errors = <String>[];
 
-      // 4. Import clothing items
+      // 4. Import categories first (if available)
+      final categoriesData = backupData['categories'] as List? ?? [];
+      if (categoriesData.isNotEmpty) {
+        onProgress?.call('Importing ${categoriesData.length} categories...');
+
+        for (final categoryData in categoriesData) {
+          try {
+            final category = Category.fromJson(categoryData as Map<String, dynamic>);
+            await _categoryRepository.saveCategory(category);
+            categoriesImported++;
+          } catch (e) {
+            errors.add('Failed to import category: $e');
+          }
+        }
+      }
+
+      // 4.5. Import custom colors (if available)
+      final customColorsData = backupData['customColors'] as List? ?? [];
+      if (customColorsData.isNotEmpty) {
+        onProgress?.call('Importing ${customColorsData.length} custom colors...');
+
+        for (final colorData in customColorsData) {
+          try {
+            final customColor = CustomColor.fromJson(colorData as Map<String, dynamic>);
+            await _customColorRepository.saveColor(customColor);
+            customColorsImported++;
+          } catch (e) {
+            errors.add('Failed to import custom color: $e');
+          }
+        }
+      }
+
+      // 4.6. Import outfit styles (if available)
+      final outfitStylesData = backupData['outfitStyles'] as List? ?? [];
+      if (outfitStylesData.isNotEmpty) {
+        onProgress?.call('Importing ${outfitStylesData.length} outfit styles...');
+
+        for (final styleData in outfitStylesData) {
+          try {
+            final outfitStyle = OutfitStyle.fromJson(styleData as Map<String, dynamic>);
+            await _outfitStyleRepository.saveOutfitStyle(outfitStyle);
+            outfitStylesImported++;
+          } catch (e) {
+            errors.add('Failed to import outfit style: $e');
+          }
+        }
+      }
+
+      // 5. Import clothing items
       final clothingItemsData = backupData['clothingItems'] as List? ?? [];
       onProgress?.call('Importing ${clothingItemsData.length} clothing items...');
 
@@ -145,7 +208,7 @@ class BackupImportService {
         }
       }
 
-      // 5. Import outfits
+      // 6. Import outfits
       final outfitsData = backupData['outfits'] as List? ?? [];
       onProgress?.call('Importing ${outfitsData.length} outfits...');
 
@@ -191,7 +254,7 @@ class BackupImportService {
         }
       }
 
-      // 6. Cleanup temp directory
+      // 7. Cleanup temp directory
       onProgress?.call('Cleaning up...');
       if (extractPath != null) {
         try {
@@ -209,6 +272,9 @@ class BackupImportService {
       return ImportResult(
         itemsImported: itemsImported,
         outfitsImported: outfitsImported,
+        categoriesImported: categoriesImported,
+        customColorsImported: customColorsImported,
+        outfitStylesImported: outfitStylesImported,
         imagesUploaded: imagesUploaded,
         errors: errors,
       );
@@ -228,7 +294,6 @@ class BackupImportService {
       await extractDir.create(recursive: true);
     }
 
-    int extractedCount = 0;
     for (final file in archive) {
       final filename = file.name;
       if (file.isFile) {
@@ -236,11 +301,8 @@ class BackupImportService {
         final outputFile = File('$extractPath/$filename');
         await outputFile.create(recursive: true);
         await outputFile.writeAsBytes(data);
-        extractedCount++;
-        print('DEBUG: Extracted: $filename to ${outputFile.path}');
       }
     }
-    print('DEBUG: Total files extracted: $extractedCount');
   }
 
   /// Find image file in extracted files
@@ -252,23 +314,19 @@ class BackupImportService {
   }) {
     // Try both old format (guid_main.jpg) and new format (clothing_guid_main.jpg)
     final prefix = isOutfit ? 'outfit_' : 'clothing_';
-    final newPattern = '${prefix}${itemId}_$suffix';
+    final newPattern = '$prefix${itemId}_$suffix';
     final oldPattern = '${itemId}_$suffix';
 
-    print('DEBUG: Looking for patterns: $newPattern OR $oldPattern');
-    print('DEBUG: Available files: ${imageFiles.keys.take(5).join(", ")}...');
 
     // Search by filename (imageFiles keys are now just filenames)
     for (final entry in imageFiles.entries) {
       final filename = entry.key;
       // Try new format first, then old format
       if (filename.startsWith(newPattern) || filename.startsWith(oldPattern)) {
-        print('DEBUG: FOUND MATCH: $filename');
         return entry.value;
       }
     }
 
-    print('DEBUG: NO MATCH FOUND for $newPattern or $oldPattern');
     return null;
   }
 
@@ -334,7 +392,8 @@ class BackupImportService {
       name: json['name'] as String,
       clothingItemIds: (json['clothingItemIds'] as List?)?.cast<String>() ?? [],
       imagePreviewPath: firebasePreviewUrl,
-      categories: (json['categories'] as List?)?.cast<String>() ?? [],
+      categories: (json['categories'] as List?)?.cast<String>() ?? [], // Backward compatibility
+      outfitStyles: (json['outfitStyles'] as List?)?.cast<String>() ?? [],
       seasons: json['season'] != null
           ? [Season.values.firstWhere((e) => e.name == json['season'])]
           : (json['seasons'] as List?)
@@ -364,16 +423,22 @@ class BackupImportService {
 class ImportResult {
   final int itemsImported;
   final int outfitsImported;
+  final int categoriesImported;
+  final int customColorsImported;
+  final int outfitStylesImported;
   final int imagesUploaded;
   final List<String> errors;
 
   ImportResult({
     required this.itemsImported,
     required this.outfitsImported,
+    required this.categoriesImported,
+    required this.customColorsImported,
+    required this.outfitStylesImported,
     required this.imagesUploaded,
     required this.errors,
   });
 
   bool get hasErrors => errors.isNotEmpty;
-  bool get isSuccess => itemsImported > 0 || outfitsImported > 0;
+  bool get isSuccess => itemsImported > 0 || outfitsImported > 0 || categoriesImported > 0 || customColorsImported > 0 || outfitStylesImported > 0;
 }

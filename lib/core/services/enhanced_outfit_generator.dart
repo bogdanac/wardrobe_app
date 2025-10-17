@@ -2,16 +2,54 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
+import '../../domain/entities/custom_color.dart';
 import '../../domain/repositories/clothing_repository.dart';
+import '../../domain/repositories/custom_color_repository.dart';
 import '../themes/app_colors.dart';
 import '../errors/app_exceptions.dart';
 
 /// Enhanced outfit generator with seasonal awareness and smart recommendations
 class EnhancedOutfitGenerator {
   final ClothingRepository _clothingRepository;
+  final CustomColorRepository _colorRepository;
   final Random _random = Random();
 
-  EnhancedOutfitGenerator(this._clothingRepository);
+  // Cache for neutral colors
+  Set<String> _neutralColorNames = {};
+  bool _colorsLoaded = false;
+
+  EnhancedOutfitGenerator(this._clothingRepository, this._colorRepository);
+
+  /// Load colors from database and identify neutrals
+  Future<void> _loadColors() async {
+    if (_colorsLoaded) return;
+
+    try {
+      final colors = await _colorRepository.getAllColors();
+
+      // Identify neutral colors (section == neutrals)
+      _neutralColorNames = colors
+          .where((c) => c.section == ColorSection.neutrals)
+          .map((c) => c.name.toLowerCase())
+          .toSet();
+
+
+      _colorsLoaded = true;
+    } catch (e) {
+      // Fallback to basic neutrals if loading fails
+      _neutralColorNames = {'black', 'white', 'gray', 'grey', 'beige', 'cream', 'brown', 'tan', 'khaki', 'coffee'};
+    }
+  }
+
+  /// Check if a color name is neutral
+  bool _isNeutralColor(String colorName) {
+    return _neutralColorNames.contains(colorName.toLowerCase());
+  }
+
+  /// Get non-neutral colors from an item
+  List<String> _getNonNeutralColors(ClothingItem item) {
+    return item.colors.where((color) => !_isNeutralColor(color)).toList();
+  }
 
   /// Generate multiple outfits with enhanced logic
   Future<List<Outfit>> generateEnhancedOutfits({
@@ -25,6 +63,8 @@ class EnhancedOutfitGenerator {
     List<ClothingType>? excludeTypes,
   }) async {
     try {
+      // Load colors before generating outfits
+      await _loadColors();
       final allItems = await _clothingRepository.filterClothingItems(
         categories: categories,
         season: season,
@@ -296,8 +336,17 @@ class EnhancedOutfitGenerator {
   }
 
   /// Calculate color compatibility score
+  /// Neutrals are freely compatible and don't count as "real" colors
   double _calculateColorCompatibilityScore(ClothingItem item, List<ClothingItem> existingItems) {
     if (item.colors.isEmpty) return 0;
+
+    // Get non-neutral colors only for compatibility checking
+    final itemNonNeutralColors = _getNonNeutralColors(item);
+
+    // If item only has neutral colors, it's always compatible
+    if (itemNonNeutralColors.isEmpty) {
+      return 3.0; // High bonus for neutral items (they go with everything)
+    }
 
     double totalScore = 0;
     int comparisons = 0;
@@ -305,12 +354,23 @@ class EnhancedOutfitGenerator {
     for (final existingItem in existingItems) {
       if (existingItem.colors.isEmpty) continue;
 
-      for (final itemColor in item.colors) {
-        for (final existingColor in existingItem.colors) {
+      // Get non-neutral colors from existing item
+      final existingNonNeutralColors = _getNonNeutralColors(existingItem);
+
+      // If existing item only has neutrals, new item is compatible
+      if (existingNonNeutralColors.isEmpty) {
+        totalScore += 2;
+        comparisons++;
+        continue;
+      }
+
+      // Compare only non-neutral colors
+      for (final itemColor in itemNonNeutralColors) {
+        for (final existingColor in existingNonNeutralColors) {
           try {
             final color1 = Color(int.parse(itemColor.replaceFirst('#', '0xFF')));
             final color2 = Color(int.parse(existingColor.replaceFirst('#', '0xFF')));
-            
+
             if (AppColors.areColorsCompatible(color1, color2)) {
               totalScore += 2;
             } else {
@@ -454,19 +514,27 @@ class EnhancedOutfitGenerator {
   }
 
   /// Calculate color harmony for the entire outfit
+  /// Only considers non-neutral colors for harmony
   double _calculateOutfitColorHarmony(List<ClothingItem> items) {
-    final allColors = items.expand((item) => item.colors).toList();
-    if (allColors.length < 2) return 0;
-    
+    // Get only non-neutral colors from all items
+    final allNonNeutralColors = items
+        .expand((item) => _getNonNeutralColors(item))
+        .toList();
+
+    // If outfit has 0-1 non-neutral colors, it's perfectly harmonious (all neutrals or monochrome)
+    if (allNonNeutralColors.length < 2) {
+      return 10.0; // Perfect harmony bonus for neutral-only or monochrome outfits
+    }
+
     double harmonyScore = 0;
     int comparisons = 0;
-    
-    for (int i = 0; i < allColors.length; i++) {
-      for (int j = i + 1; j < allColors.length; j++) {
+
+    for (int i = 0; i < allNonNeutralColors.length; i++) {
+      for (int j = i + 1; j < allNonNeutralColors.length; j++) {
         try {
-          final color1 = Color(int.parse(allColors[i].replaceFirst('#', '0xFF')));
-          final color2 = Color(int.parse(allColors[j].replaceFirst('#', '0xFF')));
-          
+          final color1 = Color(int.parse(allNonNeutralColors[i].replaceFirst('#', '0xFF')));
+          final color2 = Color(int.parse(allNonNeutralColors[j].replaceFirst('#', '0xFF')));
+
           if (AppColors.areColorsCompatible(color1, color2)) {
             harmonyScore += 1;
           }
@@ -476,7 +544,7 @@ class EnhancedOutfitGenerator {
         }
       }
     }
-    
+
     return comparisons > 0 ? (harmonyScore / comparisons) * 10 : 0;
   }
 

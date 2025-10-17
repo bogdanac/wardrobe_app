@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/clothing_item.dart';
+import '../../domain/entities/custom_color.dart';
 import '../../core/themes/app_theme.dart';
-import '../../core/services/color_palette_service.dart';
+import '../providers/custom_color_provider.dart';
+import '../providers/settings_provider.dart';
+import '../providers/category_provider.dart';
 
 class MinimalistFilters extends ConsumerStatefulWidget {
   final List<ClothingType> selectedTypes;
@@ -32,46 +34,6 @@ class MinimalistFilters extends ConsumerStatefulWidget {
 }
 
 class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
-  final ColorPaletteService _colorService = ColorPaletteService();
-  List<Map<String, String>> _paletteColors = [];
-  List<String> _categories = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadColors();
-    _loadCategories();
-  }
-
-  Future<void> _loadColors() async {
-    final colors = await _colorService.getColors();
-    setState(() {
-      _paletteColors = colors;
-    });
-  }
-
-  Future<void> _loadCategories() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> savedCategories = prefs.getStringList('custom_style_categories') ?? [];
-
-    if (savedCategories.isEmpty) {
-      savedCategories = [
-        'brunch with the girls',
-        'period safe',
-        'mall/errands',
-        'work',
-        'elegant',
-        'classy events',
-        'festivals',
-        'romantic dates',
-        'comfortable',
-      ];
-    }
-
-    setState(() {
-      _categories = savedCategories;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +72,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           labelStyle: TextStyle(fontSize: 12),
         ),
-        value: widget.selectedTypes.isEmpty ? null : widget.selectedTypes.first,
+        initialValue: widget.selectedTypes.isEmpty ? null : widget.selectedTypes.first,
         isExpanded: true,
         items: [
           const DropdownMenuItem<ClothingType?>(
@@ -146,6 +108,10 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
   }
 
   Widget _buildSeasonDropdown() {
+    final settings = ref.watch(settingsProvider);
+    // Show current season from settings when no explicit filter is set
+    final displayedSeason = widget.selectedSeason ?? settings.currentSeason;
+
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
@@ -158,7 +124,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           labelStyle: TextStyle(fontSize: 12),
         ),
-        value: widget.selectedSeason,
+        value: displayedSeason,
         isExpanded: true,
         items: [
           const DropdownMenuItem<Season?>(
@@ -196,60 +162,174 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
     );
   }
   Widget _buildColorDropdown() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonFormField<String?>(
-        decoration: const InputDecoration(
-          labelText: 'Color',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          labelStyle: TextStyle(fontSize: 12),
-        ),
-        value: widget.selectedColors.isEmpty ? null : widget.selectedColors.first,
-        isExpanded: true,
-        items: [
-          const DropdownMenuItem<String?>(
-            value: null,
-            child: Text('All', style: TextStyle(fontSize: 12)),
-          ),
-          ..._paletteColors.map((colorData) => DropdownMenuItem<String?>(
-            value: colorData['name'],
-            child: Row(
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _hexToColor(colorData['hex']!),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppTheme.mediumGray.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    colorData['name']!,
-                    style: const TextStyle(fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+    final currentValue = widget.selectedColors.isEmpty ? null : widget.selectedColors.first;
+    final colorsAsync = ref.watch(allCustomColorsProvider);
+
+    return colorsAsync.when(
+      data: (colors) {
+        if (colors.isEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
             ),
-          )),
-        ],
-        onChanged: (String? value) {
-          if (value == null) {
-            widget.onColorsChanged([]);
-          } else {
-            widget.onColorsChanged([value]);
-          }
-        },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              child: Text(
+                'No colors',
+                style: TextStyle(fontSize: 12, color: AppTheme.mediumGray),
+              ),
+            ),
+          );
+        }
+
+        // Group colors by section
+        final neutrals = colors.where((c) => c.section == ColorSection.neutrals).toList();
+        final pastels = colors.where((c) => c.section == ColorSection.pastels).toList();
+        final accents = colors.where((c) => c.section == ColorSection.accents).toList();
+
+        final dropdownItems = <DropdownMenuItem<String?>>[];
+
+        // Add "All" option
+        dropdownItems.add(const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('All', style: TextStyle(fontSize: 12)),
+        ));
+
+        // Add Neutrals section
+        if (neutrals.isNotEmpty) {
+          dropdownItems.add(const DropdownMenuItem<String?>(
+            enabled: false,
+            value: '_neutrals_header',
+            child: Text(
+              'NEUTRALS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ));
+          dropdownItems.addAll(neutrals.map((color) => _buildColorMenuItem(color)));
+        }
+
+        // Add Pastels section
+        if (pastels.isNotEmpty) {
+          dropdownItems.add(const DropdownMenuItem<String?>(
+            enabled: false,
+            value: '_pastels_header',
+            child: Text(
+              'PASTELS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ));
+          dropdownItems.addAll(pastels.map((color) => _buildColorMenuItem(color)));
+        }
+
+        // Add Accents section
+        if (accents.isNotEmpty) {
+          dropdownItems.add(const DropdownMenuItem<String?>(
+            enabled: false,
+            value: '_accents_header',
+            child: Text(
+              'ACCENT COLORS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+          ));
+          dropdownItems.addAll(accents.map((color) => _buildColorMenuItem(color)));
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonFormField<String?>(
+            decoration: const InputDecoration(
+              labelText: 'Color',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              labelStyle: TextStyle(fontSize: 12),
+            ),
+            value: currentValue,
+            isExpanded: true,
+            items: dropdownItems,
+            onChanged: (String? value) {
+              if (value == null || value.startsWith('_')) {
+                widget.onColorsChanged([]);
+              } else {
+                widget.onColorsChanged([value]);
+              }
+            },
+          ),
+        );
+      },
+      loading: () => Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Text(
+            'Loading...',
+            style: TextStyle(fontSize: 12, color: AppTheme.mediumGray),
+          ),
+        ),
+      ),
+      error: (_, __) => Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Text(
+            'Error',
+            style: TextStyle(fontSize: 12, color: Colors.red),
+          ),
+        ),
+      ),
+    );
+  }
+
+  DropdownMenuItem<String?> _buildColorMenuItem(CustomColor color) {
+    return DropdownMenuItem<String?>(
+      value: color.name,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: color.color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.mediumGray.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                color.name,
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -304,50 +384,103 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
   }
 
   Widget _buildCategoryDropdown() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonFormField<String?>(
-        decoration: const InputDecoration(
-          labelText: 'Style',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          labelStyle: TextStyle(fontSize: 12),
-        ),
-        value: widget.selectedCategories.isEmpty ? null : widget.selectedCategories.first,
-        isExpanded: true,
-        items: [
-          const DropdownMenuItem<String?>(
-            value: null,
-            child: Text('All', style: TextStyle(fontSize: 12)),
-          ),
-          ..._categories.map((category) => DropdownMenuItem<String?>(
-            value: category,
-            child: Text(
-              category[0].toUpperCase() + category.substring(1),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
+    final currentValue = widget.selectedCategories.isEmpty ? null : widget.selectedCategories.first;
+    final categoriesAsync = ref.watch(allCategoriesProvider);
+
+    return categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
             ),
-          )),
-        ],
-        onChanged: (String? value) {
-          if (value == null) {
-            widget.onCategoriesChanged([]);
-          } else {
-            widget.onCategoriesChanged([value]);
-          }
-        },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              child: Text(
+                'No styles',
+                style: TextStyle(fontSize: 12, color: AppTheme.mediumGray),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonFormField<String?>(
+            decoration: const InputDecoration(
+              labelText: 'Style',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              labelStyle: TextStyle(fontSize: 12),
+            ),
+            value: currentValue,
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All', style: TextStyle(fontSize: 12)),
+              ),
+              ...categories.map((category) => DropdownMenuItem<String?>(
+                value: category.name,
+                child: Row(
+                  children: [
+                    Icon(
+                      category.icon ?? Icons.label,
+                      size: 16,
+                      color: category.color,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        category.name[0].toUpperCase() + category.name.substring(1),
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+            onChanged: (String? value) {
+              if (value == null) {
+                widget.onCategoriesChanged([]);
+              } else {
+                widget.onCategoriesChanged([value]);
+              }
+            },
+          ),
+        );
+      },
+      loading: () => Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Text(
+            'Loading...',
+            style: TextStyle(fontSize: 12, color: AppTheme.mediumGray),
+          ),
+        ),
+      ),
+      error: (_, __) => Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Text(
+            'Error',
+            style: TextStyle(fontSize: 12, color: Colors.red),
+          ),
+        ),
       ),
     );
-  }
-
-  Color _hexToColor(String hex) {
-    try {
-      return Color(int.parse(hex.substring(1), radix: 16) + 0xFF000000);
-    } catch (e) {
-      return Colors.grey;
-    }
   }
 }

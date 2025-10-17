@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:io';
 import '../../domain/entities/outfit.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
+import '../../core/constants/category_constants.dart';
 import '../providers/outfit_provider.dart';
 import '../providers/clothing_provider.dart';
+import '../providers/outfit_style_provider.dart';
 import '../widgets/clothing_item_card.dart';
 import '../../core/services/smart_defaults_service.dart';
 import '../widgets/minimalist_filters.dart';
-import '../../core/utils/category_colors.dart';
+import '../widgets/cached_image_widget.dart';
 
 class CreateOutfitScreen extends ConsumerStatefulWidget {
   final Outfit? outfit;
@@ -31,7 +32,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
 
   late TabController _tabController;
   List<String> _selectedItemIds = [];
-  List<String> _selectedCategories = [];
+  List<String> _selectedOutfitStyles = [];
   Season? _selectedSeason;
   List<WeatherRange> _selectedWeatherRanges = [];
   bool _isFavorite = false;
@@ -44,22 +45,10 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
   
   // Smart defaults services
   late SmartDefaultsService _smartDefaultsService;
-  List<String> _suggestedCategories = [];
+  List<String> _suggestedOutfitStyles = [];
   Season? _suggestedSeason;
   List<WeatherRange> _suggestedWeatherRanges = [];
   bool _isGeneratingSuggestions = false;
-
-  final List<String> _outfitCategories = [
-    'brunch',
-    'period safe',
-    'errands',
-    'work',
-    'elegant',
-    'events',
-    'festivals',
-    'dates',
-    'comfortable',
-  ];
 
   @override
   void initState() {
@@ -83,7 +72,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     _nameController.text = outfit.name;
     _notesController.text = outfit.notes ?? '';
     _selectedItemIds = List.from(outfit.clothingItemIds);
-    _selectedCategories = List.from(outfit.categories);
+    _selectedOutfitStyles = List.from(outfit.outfitStyles);
     _selectedSeason = outfit.seasons.isNotEmpty ? outfit.seasons.first : null;
     _selectedWeatherRanges = List.from(outfit.weatherRanges);
     _isFavorite = outfit.isFavorite;
@@ -218,19 +207,11 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                                             ),
                                           ],
                                         ),
-                                        child: item.imagePath != null
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Image.file(
-                                                  File(item.imagePath!),
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              )
-                                            : const Icon(
-                                                Icons.checkroom,
-                                                color: AppTheme.mediumGray,
-                                                size: 32,
-                                              ),
+                                        child: CachedImageWidget(
+                                          imagePath: item.imagePath,
+                                          fit: BoxFit.contain,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
                                       ),
                                       // Enhanced remove button
                                       Positioned(
@@ -421,7 +402,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
             controller: _nameController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              labelText: 'Outfit Name',
+              labelText: 'Outfit Name (Optional)',
               labelStyle: const TextStyle(color: Colors.white70),
               hintText: 'e.g., Summer Brunch Look',
               hintStyle: const TextStyle(color: Colors.white38),
@@ -433,12 +414,6 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter an outfit name';
-              }
-              return null;
-            },
           ),
           const SizedBox(height: 24),
           _buildCategorySelector(),
@@ -476,169 +451,222 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
   }
 
   Widget _buildCategorySelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final outfitStylesAsync = ref.watch(allOutfitStylesProvider);
+
+    return outfitStylesAsync.when(
+      data: (outfitStyles) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Style Categories',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            if (_isGeneratingSuggestions) ...[
-              const SizedBox(width: 8),
-              const SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ],
-            if (_suggestedCategories.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.auto_awesome,
-                size: 16,
-                color: AppTheme.pastelPink,
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                'Smart suggestions',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.pastelPink,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Suggested categories section
-        if (_suggestedCategories.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.pastelPink.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppTheme.pastelPink.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
                 const Text(
-                  'Suggested based on your items:',
+                  'Outfit Styles',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.mediumGray,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: _suggestedCategories.map((category) {
-                    final isSelected = _selectedCategories.contains(category);
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedCategories.remove(category);
-                          } else {
-                            _selectedCategories.add(category);
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppTheme.pastelPink : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppTheme.pastelPink,
-                            width: 1,
+                if (_isGeneratingSuggestions) ...[
+                  const SizedBox(width: 8),
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+                if (_suggestedOutfitStyles.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: AppTheme.pastelPink,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Smart suggestions',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.pastelPink,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Suggested styles section
+            if (_suggestedOutfitStyles.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.pastelPink.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.pastelPink.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Suggested based on your items:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.mediumGray,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _suggestedOutfitStyles.map((styleName) {
+                        final isSelected = _selectedOutfitStyles.contains(styleName);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedOutfitStyles.remove(styleName);
+                              } else {
+                                _selectedOutfitStyles.add(styleName);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppTheme.pastelPink : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.pastelPink,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isSelected ? Icons.check_circle : Icons.add_circle_outline,
+                                  size: 14,
+                                  color: isSelected ? Colors.white : AppTheme.pastelPink,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  styleName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSelected ? Colors.white : AppTheme.pastelPink,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Row(
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // All outfit styles
+            if (outfitStyles.isEmpty)
+              const Text(
+                'No outfit styles yet. Add some in Settings.',
+                style: TextStyle(color: AppTheme.mediumGray),
+              )
+            else
+              Wrap(
+                spacing: 12,
+                runSpacing: 0,
+                children: outfitStyles.map((style) {
+                  final isSelected = _selectedOutfitStyles.contains(style.name);
+                  final isSuggested = _suggestedOutfitStyles.contains(style.name);
+                  final description = style.description ?? DefaultOutfitStyles.getDescription(style.name);
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FilterChip(
+                        label: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (isSuggested) ...[
+                              const Icon(
+                                Icons.star,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
                             Icon(
-                              isSelected ? Icons.check_circle : Icons.add_circle_outline,
+                              style.icon ?? Icons.style,
                               size: 14,
-                              color: isSelected ? Colors.white : AppTheme.pastelPink,
+                              color: Colors.white,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              category,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected ? Colors.white : AppTheme.pastelPink,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white),
                             ),
                           ],
                         ),
+                        selected: isSelected,
+                        selectedColor: style.color,
+                        backgroundColor: style.color.withValues(alpha: 0.9),
+                        side: BorderSide.none,
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedOutfitStyles.add(style.name);
+                            } else {
+                              _selectedOutfitStyles.remove(style.name);
+                            }
+                          });
+                        },
                       ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        // All categories
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _outfitCategories.map((category) {
-            final isSelected = _selectedCategories.contains(category);
-            final isSuggested = _suggestedCategories.contains(category);
-            final baseColor = CategoryColors.getCategoryColor(category);
-            return FilterChip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isSuggested) ...[
-                    const Icon(
-                      Icons.star,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(
-                    category,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ],
+                      if (description != null && description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: GestureDetector(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    description,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.black,
+                                  duration: const Duration(seconds: 3),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            child: Tooltip(
+                              message: description,
+                              preferBelow: false,
+                              child: Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                }).toList(),
               ),
-              selected: isSelected,
-              selectedColor: baseColor,
-              backgroundColor: baseColor.withValues(alpha: 0.9),
-              side: BorderSide.none,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedCategories.add(category);
-                  } else {
-                    _selectedCategories.remove(category);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Text('Error loading outfit styles: $error'),
     );
   }
 
@@ -678,7 +706,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 4,
           children: [
             ChoiceChip(
               label: const Text('All'),
@@ -750,7 +778,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 4,
           children: WeatherRange.values.map((range) {
             final isSelected = _selectedWeatherRanges.contains(range);
             return FilterChip(
@@ -847,36 +875,30 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                     
                     return itemAsync.when(
                       data: (item) {
-                        if (item?.imagePath != null) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(item!.imagePath!),
-                              fit: BoxFit.contain,
-                            ),
-                          );
-                        }
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryWhite,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.checkroom),
+                        return CachedImageWidget(
+                          imagePath: item?.imagePath,
+                          fit: BoxFit.contain,
+                          borderRadius: BorderRadius.circular(8),
                         );
                       },
                       loading: () => Container(
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryWhite,
+                          color: AppTheme.lightGray,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const CircularProgressIndicator(),
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       ),
                       error: (error, stack) => Container(
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryWhite,
+                          color: AppTheme.lightGray,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.error),
+                        child: const Icon(
+                          Icons.error_outline,
+                          color: AppTheme.mediumGray,
+                        ),
                       ),
                     );
                   },
@@ -912,7 +934,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
   Future<void> _generateSmartSuggestions() async {
     if (_selectedItemIds.isEmpty) {
       setState(() {
-        _suggestedCategories.clear();
+        _suggestedOutfitStyles.clear();
         _suggestedSeason = null;
         _suggestedWeatherRanges.clear();
       });
@@ -931,7 +953,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
       ]);
 
       setState(() {
-        _suggestedCategories = suggestions[0] as List<String>;
+        _suggestedOutfitStyles = suggestions[0] as List<String>;
         _suggestedSeason = suggestions[1] as Season?;
         _suggestedWeatherRanges = suggestions[2] as List<WeatherRange>;
         _isGeneratingSuggestions = false;
@@ -948,10 +970,10 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
 
   /// Auto-apply suggestions if user hasn't made manual selections
   void _autoApplySuggestions() {
-    // Auto-apply category suggestions
-    if (_selectedCategories.isEmpty && _suggestedCategories.isNotEmpty) {
+    // Auto-apply outfit style suggestions
+    if (_selectedOutfitStyles.isEmpty && _suggestedOutfitStyles.isNotEmpty) {
       setState(() {
-        _selectedCategories.addAll(_suggestedCategories.take(2)); // Add top 2 suggestions
+        _selectedOutfitStyles.addAll(_suggestedOutfitStyles.take(2)); // Add top 2 suggestions
       });
     }
 
@@ -988,11 +1010,28 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     }
 
     try {
+      // Generate default name if not provided
+      String outfitName = _nameController.text.trim();
+      if (outfitName.isEmpty) {
+        // Create name based on outfit styles or date
+        if (_selectedOutfitStyles.isNotEmpty) {
+          outfitName = '${_selectedOutfitStyles.first.replaceFirst(
+            _selectedOutfitStyles.first[0],
+            _selectedOutfitStyles.first[0].toUpperCase(),
+          )} Outfit';
+        } else {
+          // Default to date-based name
+          final now = DateTime.now();
+          outfitName = 'Outfit ${now.month}/${now.day}';
+        }
+      }
+
       final outfit = Outfit(
         id: widget.outfit?.id ?? _uuid.v4(),
-        name: _nameController.text.trim(),
+        name: outfitName,
         clothingItemIds: _selectedItemIds,
-        categories: _selectedCategories,
+        categories: widget.outfit?.categories ?? [], // Keep old categories for backward compatibility
+        outfitStyles: _selectedOutfitStyles,
         seasons: _selectedSeason != null ? [_selectedSeason!] : [],
         weatherRanges: _selectedWeatherRanges,
         wearCount: widget.outfit?.wearCount ?? 0,

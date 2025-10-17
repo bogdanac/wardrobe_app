@@ -5,6 +5,7 @@ import 'dart:io';
 import '../../core/services/image_service.dart';
 import '../../core/themes/app_theme.dart';
 import '../providers/clothing_provider.dart';
+import '../providers/custom_color_provider.dart';
 import '../../domain/entities/clothing_item.dart';
 import 'package:uuid/uuid.dart';
 
@@ -358,7 +359,8 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
       try {
         // Process image
         final processedImage = await _imageService.removeBackground(image);
-        final colors = await _imageService.extractColors(processedImage, maxColors: 3);
+        final customColorRepository = ref.read(customColorRepositoryProvider);
+        final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 3);
         final imagePath = await _imageService.saveImage(processedImage);
 
         // Create clothing item with smart defaults

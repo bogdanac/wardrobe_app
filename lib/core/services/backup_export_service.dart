@@ -7,14 +7,23 @@ import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/outfit.dart';
 import '../../domain/repositories/clothing_repository.dart';
 import '../../domain/repositories/outfit_repository.dart';
+import '../../domain/repositories/category_repository.dart';
+import '../../domain/repositories/custom_color_repository.dart';
+import '../../domain/repositories/outfit_style_repository.dart';
 
 class BackupExportService {
   final ClothingRepository _clothingRepository;
   final OutfitRepository _outfitRepository;
+  final CategoryRepository _categoryRepository;
+  final CustomColorRepository _customColorRepository;
+  final OutfitStyleRepository _outfitStyleRepository;
 
   BackupExportService(
     this._clothingRepository,
     this._outfitRepository,
+    this._categoryRepository,
+    this._customColorRepository,
+    this._outfitStyleRepository,
   );
 
   /// Export complete backup with data JSON and images ZIP
@@ -51,12 +60,19 @@ class BackupExportService {
       final archivedOutfits = await _outfitRepository.getArchivedOutfits();
       final allOutfits = [...outfits, ...archivedOutfits];
 
+      final categories = await _categoryRepository.getAllCategories();
+      final customColors = await _customColorRepository.getAllColors();
+      final outfitStyles = await _outfitStyleRepository.getAllOutfitStyles();
+
       // Create backup data structure
       final backupData = {
-        'version': '1.0.0',
+        'version': '1.3.0',
         'exportDate': DateTime.now().toIso8601String(),
         'clothingItems': allItems.map((item) => _clothingItemToJson(item)).toList(),
         'outfits': allOutfits.map((outfit) => _outfitToJson(outfit)).toList(),
+        'categories': categories.map((cat) => cat.toJson()).toList(),
+        'customColors': customColors.map((color) => color.toJson()).toList(),
+        'outfitStyles': outfitStyles.map((style) => style.toJson()).toList(),
       };
 
       // Write to file
@@ -187,7 +203,8 @@ class BackupExportService {
       'name': outfit.name,
       'clothingItemIds': outfit.clothingItemIds,
       'imagePreviewPath': outfit.imagePreviewPath,
-      'categories': outfit.categories,
+      'categories': outfit.categories, // Deprecated: kept for backward compatibility
+      'outfitStyles': outfit.outfitStyles,
       'seasons': outfit.seasons.map((e) => e.name).toList(),
       'weatherRanges': outfit.weatherRanges.map((e) => e.name).toList(),
       'isFavorite': outfit.isFavorite,

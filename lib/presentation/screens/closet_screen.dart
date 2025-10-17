@@ -102,7 +102,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 16),
       child: MasonryGridView.count(
         crossAxisCount: 2,
         itemCount: items.length,
@@ -116,8 +116,8 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
             isSelected: _selectedItems.contains(items[index].id),
           ),
         ),
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
       ),
     );
   }

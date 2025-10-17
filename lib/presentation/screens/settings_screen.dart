@@ -6,13 +6,19 @@ import '../../core/config/background_removal_config.dart';
 import '../../core/config/api_config.dart';
 import '../../core/services/backup_export_service.dart';
 import '../../core/services/backup_import_service.dart';
+import '../../domain/entities/clothing_item.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/outfit_provider.dart';
+import '../providers/category_provider.dart';
+import '../providers/outfit_style_provider.dart';
+import '../providers/custom_color_provider.dart';
 import '../providers/stats_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import 'manage_categories_screen.dart';
+import 'manage_outfit_styles_screen.dart';
 import 'manage_colors_screen.dart';
+import 'color_palettes_screen.dart';
 
 // Type alias for cleaner code
 typedef RemovalMethod = BackgroundRemovalMethod;
@@ -59,7 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ? NetworkImage(authService.userPhotoUrl!)
                           : null,
                       child: authService.userPhotoUrl == null
-                          ? Icon(Icons.person, size: 30, color: AppTheme.primaryBlack)
+                          ? const Icon(Icons.person, size: 30, color: AppTheme.primaryBlack)
                           : null,
                     ),
                     const SizedBox(width: 16),
@@ -126,13 +132,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
           _buildUserProfileSection(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           _buildAppSection(settings),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           _buildImageProcessingSection(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           _buildDataSection(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           _buildAboutSection(),
         ],
       ),
@@ -280,19 +286,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.category, color: AppTheme.pastelPink),
-              title: const Text('Manage Style Categories'),
-              subtitle: const Text('Add, edit, or remove style categories'),
+              title: const Text('Manage Item Categories'),
+              subtitle: const Text('Categories for individual clothing items'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: _navigateToManageCategories,
             ),
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.style, color: AppTheme.pastelPink),
+              title: const Text('Manage Outfit Styles'),
+              subtitle: const Text('Styles for complete outfits'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _navigateToManageOutfitStyles,
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.palette, color: AppTheme.gold),
               title: const Text('Manage Colors'),
-              subtitle: const Text('Customize your color palette'),
+              subtitle: const Text('Customize your items colors'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: _navigateToManageColors,
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.color_lens, color: AppTheme.pastelPink),
+              title: const Text('Color Palettes'),
+              subtitle: const Text('Create and manage outfit color palettes'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _navigateToColorPalettes,
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.wb_sunny, color: AppTheme.gold),
+              title: const Text('Current Season'),
+              subtitle: Text(
+                settings.currentSeason != null
+                    ? _getSeasonLabel(settings.currentSeason!)
+                    : 'Not set - showing all items',
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () => _showSeasonDialog(settings.currentSeason),
             ),
             const Divider(),
             ListTile(
@@ -554,11 +591,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _navigateToManageOutfitStyles() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ManageOutfitStylesScreen(),
+      ),
+    );
+  }
+
   void _navigateToManageColors() {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const ManageColorsScreen(),
+      ),
+    );
+  }
+
+  void _navigateToColorPalettes() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ColorPalettesScreen(),
       ),
     );
   }
@@ -569,7 +624,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final clothingRepository = ref.read(clothingRepositoryProvider);
       final outfitRepository = ref.read(outfitRepositoryProvider);
-      final exportService = BackupExportService(clothingRepository, outfitRepository);
+      final categoryRepository = ref.read(categoryRepositoryProvider);
+      final customColorRepository = ref.read(customColorRepositoryProvider);
+      final outfitStyleRepository = ref.read(outfitStyleRepositoryProvider);
+      final exportService = BackupExportService(clothingRepository, outfitRepository, categoryRepository, customColorRepository, outfitStyleRepository);
 
       // Show progress dialog
       if (mounted) {
@@ -677,7 +735,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       final clothingRepository = ref.read(clothingRepositoryProvider);
       final outfitRepository = ref.read(outfitRepositoryProvider);
-      final importService = BackupImportService(clothingRepository, outfitRepository);
+      final categoryRepository = ref.read(categoryRepositoryProvider);
+      final customColorRepository = ref.read(customColorRepositoryProvider);
+      final outfitStyleRepository = ref.read(outfitStyleRepositoryProvider);
+      final importService = BackupImportService(clothingRepository, outfitRepository, categoryRepository, customColorRepository, outfitStyleRepository);
 
       // Show progress dialog
       String progressText = 'Starting import...';
@@ -718,6 +779,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
 
       // Refresh all data
+      ref.invalidate(allCategoriesProvider);
+      ref.invalidate(allOutfitStylesProvider);
+      ref.invalidate(allCustomColorsProvider);
       ref.invalidate(allClothingItemsProvider);
       ref.invalidate(filteredClothingItemsProvider);
       ref.invalidate(allOutfitsProvider);
@@ -735,6 +799,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('Item categories imported: ${result.categoriesImported}'),
+                Text('Outfit styles imported: ${result.outfitStylesImported}'),
+                Text('Custom colors imported: ${result.customColorsImported}'),
                 Text('Items imported: ${result.itemsImported}'),
                 Text('Outfits imported: ${result.outfitsImported}'),
                 Text('Images uploaded: ${result.imagesUploaded}'),
@@ -768,6 +835,91 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _isProcessing = false);
       }
     }
+  }
+
+  String _getSeasonLabel(Season season) {
+    switch (season) {
+      case Season.spring:
+        return 'Spring';
+      case Season.summer:
+        return 'Summer';
+      case Season.autumn:
+        return 'Autumn';
+      case Season.winter:
+        return 'Winter';
+      case Season.allSeason:
+        return 'All Season';
+    }
+  }
+
+  void _showSeasonDialog(Season? currentSeason) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Current Season'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<Season?>(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('None (Show all items)'),
+              value: null,
+              groupValue: currentSeason,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setCurrentSeason(null);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<Season?>(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Spring'),
+              value: Season.spring,
+              groupValue: currentSeason,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setCurrentSeason(Season.spring);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<Season?>(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Summer'),
+              value: Season.summer,
+              groupValue: currentSeason,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setCurrentSeason(Season.summer);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<Season?>(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Autumn'),
+              value: Season.autumn,
+              groupValue: currentSeason,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setCurrentSeason(Season.autumn);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<Season?>(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Winter'),
+              value: Season.winter,
+              groupValue: currentSeason,
+              onChanged: (value) {
+                ref.read(settingsProvider.notifier).setCurrentSeason(Season.winter);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSignOutDialog() {

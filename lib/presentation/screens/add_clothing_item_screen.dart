@@ -9,6 +9,7 @@ import '../../core/services/color_palette_service.dart';
 import '../../core/errors/error_handler.dart';
 import '../../core/utils/loading_state.dart';
 import '../providers/clothing_provider.dart';
+import '../providers/custom_color_provider.dart';
 import '../widgets/unified_filters.dart';
 import '../widgets/adaptive_clothing_image.dart';
 import 'archive_confirmation_screen.dart';
@@ -33,7 +34,6 @@ class AddClothingItemScreen extends ConsumerStatefulWidget {
 class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _imageService = ImageService();
-  final _colorService = ColorPaletteService();
   final _uuid = const Uuid();
 
   ClothingType _selectedType = ClothingType.top;
@@ -75,7 +75,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   }
 
   Future<void> _loadPaletteColors() async {
-    final colors = await _colorService.getColors();
+    final customColorRepository = ref.read(customColorRepositoryProvider);
+    final colorService = ColorPaletteService(customColorRepository);
+    final colors = await colorService.getColors();
     setState(() {
       _paletteColors = colors;
     });
@@ -491,7 +493,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       children: [
         Wrap(
           spacing: 4,
-          runSpacing: 4,
+          runSpacing: 0,
           children: MetallicElements.values.map((element) {
             final isSelected = _selectedMetallicElements == element;
             return ChoiceChip(
@@ -724,12 +726,13 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   Future<void> _processImages() async {
     _processedImages.clear();
     final allColors = <Color>[];
+    final customColorRepository = ref.read(customColorRepositoryProvider);
 
     for (final image in _selectedImages) {
       try {
         final processedImage = await _imageService.removeBackground(image);
-        final colors = await _imageService.extractColors(processedImage, maxColors: 1);
-        
+        final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 1);
+
         _processedImages.add({
           'file': processedImage,
           'colors': colors,
@@ -737,7 +740,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         allColors.addAll(colors);
       } catch (e) {
         try {
-          final colors = await _imageService.extractColors(image, maxColors: 1);
+          final colors = await _imageService.extractColors(image, customColorRepository: customColorRepository, maxColors: 1);
           _processedImages.add({
             'file': image,
             'colors': colors,
@@ -810,7 +813,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       final processedImage = await _imageService.removeBackground(imageToProcess);
 
       // Extract colors from the new processed image
-      final colors = await _imageService.extractColors(processedImage, maxColors: 3);
+      final customColorRepository = ref.read(customColorRepositoryProvider);
+      final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 3);
 
       setState(() {
         _selectedImages = [processedImage];
@@ -1100,7 +1104,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,
-          runSpacing: 4,
+          runSpacing: 0,
           children: ClothingType.values.map((type) => _buildTypeChip(type)).toList(),
         ),
       ],

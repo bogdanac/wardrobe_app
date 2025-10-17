@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'closet_screen.dart';
 import 'outfits_screen.dart';
 import 'generator_screen.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
+  List<String> _outfitCategories = [];
 
   final List<Widget> _screens = [
     const ClosetScreen(),
@@ -39,11 +41,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       setState(() {});
     });
 
+    // Load categories
+    _loadCategories();
+
     // Initialize shared intent listeners
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final sharedIntentService = ref.read(sharedIntentServiceProvider);
       sharedIntentService.initializeSharedIntentListeners(context);
     });
+  }
+
+  Future<void> _loadCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCategories = prefs.getStringList('custom_style_categories');
+
+    // Default categories if none are saved
+    final defaultCategories = [
+      'brunch',
+      'period safe',
+      'errands',
+      'work',
+      'elegant',
+      'events',
+      'festivals',
+      'dates',
+      'comfortable',
+    ];
+
+    if (mounted) {
+      setState(() {
+        _outfitCategories = savedCategories ?? defaultCategories;
+      });
+    }
   }
 
   @override
@@ -177,17 +206,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
 
   Widget _buildCategoryFilter() {
     final filter = ref.watch(outfitFilterProvider);
-    final outfitCategories = [
-      'brunch',
-      'period safe',
-      'errands',
-      'work',
-      'elegant',
-      'events',
-      'festivals',
-      'dates',
-      'comfortable',
-    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,8 +220,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
-          children: outfitCategories.map((category) {
+          runSpacing: 4,
+          children: _outfitCategories.map((category) {
             final isSelected = filter.categories.contains(category);
             final baseColor = CategoryColors.getCategoryColor(category);
             return FilterChip(
@@ -247,7 +265,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 4,
           children: [
             ChoiceChip(
               label: const Text('All', style: TextStyle(color: Colors.white)),
@@ -294,7 +312,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 4,
           children: WeatherRange.values.map((range) {
             final isSelected = filter.weatherRanges.contains(range);
             return FilterChip(

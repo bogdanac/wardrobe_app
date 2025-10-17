@@ -4,8 +4,10 @@ import '../../domain/entities/clothing_item.dart';
 import '../../domain/repositories/outfit_repository.dart';
 import '../../data/repositories/firebase_outfit_repository.dart';
 import '../../core/services/outfit_generator_service.dart';
+import '../../core/services/enhanced_outfit_generator.dart';
 import 'clothing_provider.dart';
 import 'auth_provider.dart';
+import 'custom_color_provider.dart';
 
 final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
   // Get the current user ID from auth provider
@@ -17,6 +19,13 @@ final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
 final outfitGeneratorProvider = Provider<OutfitGeneratorService>((ref) {
   final clothingRepository = ref.read(clothingRepositoryProvider);
   return OutfitGeneratorService(clothingRepository);
+});
+
+// Enhanced outfit generator with dynamic color loading and smart neutral handling
+final enhancedOutfitGeneratorProvider = Provider<EnhancedOutfitGenerator>((ref) {
+  final clothingRepository = ref.read(clothingRepositoryProvider);
+  final colorRepository = ref.read(customColorRepositoryProvider);
+  return EnhancedOutfitGenerator(clothingRepository, colorRepository);
 });
 
 final allOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {

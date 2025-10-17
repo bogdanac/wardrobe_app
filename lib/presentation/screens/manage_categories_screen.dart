@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/themes/app_theme.dart';
-import '../../core/utils/category_colors.dart';
+import '../../core/constants/category_constants.dart';
+import '../../domain/entities/category.dart' as entity;
+import '../providers/category_provider.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/outfit_provider.dart';
 
@@ -14,115 +16,149 @@ class ManageCategoriesScreen extends ConsumerStatefulWidget {
 }
 
 class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen> {
-  static const String _customCategoriesKey = 'custom_style_categories';
-  
-  List<String> _categories = [];
-  final TextEditingController _newCategoryController = TextEditingController();
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadCustomCategories();
+    _initializeDefaultCategories();
   }
 
-  @override
-  void dispose() {
-    _newCategoryController.dispose();
-    super.dispose();
-  }
+  Future<void> _initializeDefaultCategories() async {
+    final repository = ref.read(categoryRepositoryProvider);
+    final existingCategories = await repository.getAllCategories();
 
-  Future<void> _loadCustomCategories() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> savedCategories = prefs.getStringList(_customCategoriesKey) ?? [];
-    
-    // If no saved categories, initialize with defaults
-    if (savedCategories.isEmpty) {
-      savedCategories = [
-        'brunch with the girls',
-        'period safe',
-        'mall/errands',
-        'work',
-        'elegant',
-        'classy events',
-        'festivals',
-        'romantic dates',
-        'comfortable',
-      ];
-      await prefs.setStringList(_customCategoriesKey, savedCategories);
+    // Migrate existing categories to add order field if missing
+    if (existingCategories.isNotEmpty) {
+      // Check if any categories need migration (have order = 0 and weren't intentionally set to 0)
+      final needsMigration = existingCategories.where((c) => c.order == 0).length == existingCategories.length;
+
+      if (needsMigration) {
+        for (int i = 0; i < existingCategories.length; i++) {
+          final updatedCategory = existingCategories[i].copyWith(
+            order: i,
+            updatedAt: DateTime.now(),
+          );
+          await repository.updateCategory(updatedCategory);
+        }
+      }
+      return; // Don't initialize defaults if user has categories
     }
-    
-    setState(() {
-      _categories = savedCategories;
-      _isLoading = false;
-    });
-  }
 
-  Future<void> _saveCustomCategories() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_customCategoriesKey, _categories);
+    // If no categories exist, initialize with defaults
+    final now = DateTime.now();
+    for (int i = 0; i < DefaultCategories.items.length; i++) {
+      final categoryInfo = DefaultCategories.items[i];
+      final category = entity.Category(
+        id: const Uuid().v4(),
+        name: categoryInfo.name,
+        color: categoryInfo.color,
+        icon: categoryInfo.icon,
+        description: categoryInfo.description,
+        createdAt: now,
+        updatedAt: now,
+        order: i,
+      );
+      await repository.saveCategory(category);
+    }
   }
 
   void _showAddCategoryDialog() {
     final controller = TextEditingController();
     Color selectedColor = _getColorOptions().first;
+    IconData selectedIcon = _getIconOptions().first;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Category'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Category Name',
-                  hintText: 'Enter category name',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Category Name',
+                    hintText: 'Enter category name',
+                  ),
+                  autofocus: true,
                 ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Color',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _getColorOptions().map((color) {
-                  final isSelected = selectedColor == color;
-                  return GestureDetector(
-                    onTap: () {
-                      setDialogState(() {
-                        selectedColor = color;
-                      });
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.black : Colors.grey.shade300,
-                          width: isSelected ? 3 : 1,
+                const SizedBox(height: 16),
+                const Text(
+                  'Choose Icon',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _getIconOptions().map((icon) {
+                    final isSelected = selectedIcon == icon;
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          selectedIcon = icon;
+                        });
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isSelected ? selectedColor.withValues(alpha: 0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? selectedColor : Colors.grey.shade400,
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: selectedColor,
+                          size: 24,
                         ),
                       ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 16,
-                            )
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Icon Color',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _getColorOptions().map((color) {
+                    final isSelected = selectedColor == color;
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          selectedColor = color;
+                        });
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? color : Colors.grey.shade400,
+                            width: isSelected ? 3 : 1,
+                          ),
+                        ),
+                        child: Icon(
+                          selectedIcon,
+                          color: color,
+                          size: 24,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -132,14 +168,32 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
             TextButton(
               onPressed: () async {
                 final categoryName = controller.text.trim();
-                if (categoryName.isNotEmpty && !_categories.contains(categoryName)) {
-                  await _updateCategoryColor(categoryName, selectedColor);
-                  setState(() {
-                    _categories.add(categoryName);
-                  });
-                  await _saveCustomCategories();
-                  if (context.mounted) {
-                    Navigator.pop(context);
+                if (categoryName.isNotEmpty) {
+                  // Check if category name already exists
+                  final repository = ref.read(categoryRepositoryProvider);
+                  final existing = await repository.getAllCategories();
+                  final nameExists = existing.any((c) => c.name == categoryName);
+
+                  if (!nameExists) {
+                    final maxOrder = existing.isEmpty ? 0 : existing.map((c) => c.order).reduce((a, b) => a > b ? a : b);
+                    final now = DateTime.now();
+                    final category = entity.Category(
+                      id: const Uuid().v4(),
+                      name: categoryName,
+                      color: selectedColor,
+                      icon: selectedIcon,
+                      createdAt: now,
+                      updatedAt: now,
+                      order: maxOrder + 1,
+                    );
+                    await repository.saveCategory(category);
+
+                    // Invalidate to refresh the list
+                    ref.invalidate(allCategoriesProvider);
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   }
                 }
               },
@@ -151,36 +205,24 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     );
   }
 
-  void _addCategory() {
-    final categoryName = _newCategoryController.text.trim();
-    if (categoryName.isNotEmpty && !_categories.contains(categoryName)) {
-      setState(() {
-        _categories.add(categoryName);
-      });
-      _newCategoryController.clear();
-      _saveCustomCategories();
-    }
-  }
 
-  Future<void> _deleteCategory(String category) async {
+  Future<void> _deleteCategory(entity.Category category) async {
     await _deleteCategoryWithUnassign(category);
   }
 
-  Future<void> _deleteCategoryWithUnassign(String category) async {
+  Future<void> _deleteCategoryWithUnassign(entity.Category category) async {
     try {
-      // Remove from categories list
-      setState(() {
-        _categories.remove(category);
-      });
-      await _saveCustomCategories();
+      // Delete from Firebase
+      final repository = ref.read(categoryRepositoryProvider);
+      await repository.deleteCategory(category.id);
 
       // Remove from all clothing items
       final clothingRepository = ref.read(clothingRepositoryProvider);
       final allClothingItems = await clothingRepository.getAllClothingItems();
-      
+
       for (final item in allClothingItems) {
-        if (item.categories.contains(category)) {
-          final updatedCategories = item.categories.where((c) => c != category).toList();
+        if (item.categories.contains(category.name)) {
+          final updatedCategories = item.categories.where((c) => c != category.name).toList();
           final updatedItem = item.copyWith(categories: updatedCategories);
           await clothingRepository.updateClothingItem(updatedItem);
         }
@@ -189,16 +231,17 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
       // Remove from all outfits
       final outfitRepository = ref.read(outfitRepositoryProvider);
       final allOutfits = await outfitRepository.getAllOutfits();
-      
+
       for (final outfit in allOutfits) {
-        if (outfit.categories.contains(category)) {
-          final updatedCategories = outfit.categories.where((c) => c != category).toList();
+        if (outfit.categories.contains(category.name)) {
+          final updatedCategories = outfit.categories.where((c) => c != category.name).toList();
           final updatedOutfit = outfit.copyWith(categories: updatedCategories);
           await outfitRepository.updateOutfit(updatedOutfit);
         }
       }
 
       // Invalidate providers to refresh UI
+      ref.invalidate(allCategoriesProvider);
       ref.invalidate(allClothingItemsProvider);
       ref.invalidate(allOutfitsProvider);
       
@@ -208,66 +251,104 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     }
   }
 
-  Future<void> _editCategory(String oldCategory) async {
-    final controller = TextEditingController(text: oldCategory);
-    Color selectedColor = CategoryColors.getCategoryColor(oldCategory);
+  Future<void> _editCategory(entity.Category category) async {
+    final controller = TextEditingController(text: category.name);
+    Color selectedColor = category.color;
+    IconData selectedIcon = category.icon ?? Icons.star;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Edit Category'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Category Name',
-                  hintText: 'Enter category name',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Category Name',
+                    hintText: 'Enter category name',
+                  ),
+                  autofocus: true,
                 ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Color',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _getColorOptions().map((color) {
-                  final isSelected = selectedColor == color;
-                  return GestureDetector(
-                    onTap: () {
-                      setDialogState(() {
-                        selectedColor = color;
-                      });
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.black : Colors.grey.shade300,
-                          width: isSelected ? 3 : 1,
+                const SizedBox(height: 16),
+                const Text(
+                  'Choose Icon',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _getIconOptions().map((icon) {
+                    final isSelected = selectedIcon == icon;
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          selectedIcon = icon;
+                        });
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isSelected ? selectedColor.withValues(alpha: 0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? selectedColor : Colors.grey.shade400,
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: selectedColor,
+                          size: 24,
                         ),
                       ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 16,
-                            )
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Icon Color',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _getColorOptions().map((color) {
+                    final isSelected = selectedColor == color;
+                    return GestureDetector(
+                      onTap: () {
+                        setDialogState(() {
+                          selectedColor = color;
+                        });
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? color : Colors.grey.shade400,
+                            width: isSelected ? 3 : 1,
+                          ),
+                        ),
+                        child: Icon(
+                          selectedIcon,
+                          color: color,
+                          size: 24,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -277,15 +358,21 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
             TextButton(
               onPressed: () async {
                 final newName = controller.text.trim();
-                if (newName.isNotEmpty && newName != oldCategory) {
-                  if (!_categories.contains(newName)) {
+                final repository = ref.read(categoryRepositoryProvider);
+
+                if (newName.isNotEmpty && newName != category.name) {
+                  // Check if new name already exists
+                  final existing = await repository.getAllCategories();
+                  final nameExists = existing.any((c) => c.name == newName && c.id != category.id);
+
+                  if (!nameExists) {
                     // Update category name in all clothing items
                     final clothingRepository = ref.read(clothingRepositoryProvider);
                     final allClothingItems = await clothingRepository.getAllClothingItems();
 
                     for (final item in allClothingItems) {
-                      if (item.categories.contains(oldCategory)) {
-                        final updatedCategories = item.categories.map((c) => c == oldCategory ? newName : c).toList();
+                      if (item.categories.contains(category.name)) {
+                        final updatedCategories = item.categories.map((c) => c == category.name ? newName : c).toList();
                         final updatedItem = item.copyWith(categories: updatedCategories);
                         await clothingRepository.updateClothingItem(updatedItem);
                       }
@@ -296,25 +383,24 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                     final allOutfits = await outfitRepository.getAllOutfits();
 
                     for (final outfit in allOutfits) {
-                      if (outfit.categories.contains(oldCategory)) {
-                        final updatedCategories = outfit.categories.map((c) => c == oldCategory ? newName : c).toList();
+                      if (outfit.categories.contains(category.name)) {
+                        final updatedCategories = outfit.categories.map((c) => c == category.name ? newName : c).toList();
                         final updatedOutfit = outfit.copyWith(categories: updatedCategories);
                         await outfitRepository.updateOutfit(updatedOutfit);
                       }
                     }
 
-                    // Store the color selection
-                    await _updateCategoryColor(newName, selectedColor);
-
-                    setState(() {
-                      final index = _categories.indexOf(oldCategory);
-                      if (index != -1) {
-                        _categories[index] = newName;
-                      }
-                    });
-                    await _saveCustomCategories();
+                    // Update the category in Firebase
+                    final updatedCategory = category.copyWith(
+                      name: newName,
+                      color: selectedColor,
+                      icon: selectedIcon,
+                      updatedAt: DateTime.now(),
+                    );
+                    await repository.updateCategory(updatedCategory);
 
                     // Invalidate providers to refresh UI
+                    ref.invalidate(allCategoriesProvider);
                     ref.invalidate(allClothingItemsProvider);
                     ref.invalidate(allOutfitsProvider);
 
@@ -326,10 +412,18 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                       Navigator.pop(context);
                     }
                   }
-                } else if (newName == oldCategory) {
-                  // Just update color if name didn't change
-                  await _updateCategoryColor(oldCategory, selectedColor);
-                  setState(() {}); // Refresh UI to show color change
+                } else if (newName == category.name) {
+                  // Just update color/icon if name didn't change
+                  final updatedCategory = category.copyWith(
+                    color: selectedColor,
+                    icon: selectedIcon,
+                    updatedAt: DateTime.now(),
+                  );
+                  await repository.updateCategory(updatedCategory);
+
+                  // Invalidate to refresh UI
+                  ref.invalidate(allCategoriesProvider);
+
                   if (context.mounted) {
                     Navigator.pop(context);
                   }
@@ -343,14 +437,35 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     );
   }
 
-  List<String> _getAllCategories() {
-    return _categories;
-  }
+  Future<void> _reorderCategories(List<entity.Category> categories, int oldIndex, int newIndex) async {
+    // Adjust newIndex if moving down
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
 
-  // Removed snackbar methods as requested
+    // Create a new list with reordered items
+    final List<entity.Category> reorderedCategories = List.from(categories);
+    final item = reorderedCategories.removeAt(oldIndex);
+    reorderedCategories.insert(newIndex, item);
+
+    // Update order values
+    final repository = ref.read(categoryRepositoryProvider);
+    for (int i = 0; i < reorderedCategories.length; i++) {
+      final updatedCategory = reorderedCategories[i].copyWith(
+        order: i,
+        updatedAt: DateTime.now(),
+      );
+      await repository.updateCategory(updatedCategory);
+    }
+
+    // Refresh the UI
+    ref.invalidate(allCategoriesProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(allCategoriesProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Style Categories'),
@@ -361,59 +476,9 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Add new category section
-                Card(
-                  margin: const EdgeInsets.all(16),
-                  child: Padding(
+      body: categoriesAsync.when(
+        data: (categories) => ListView(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Add New Category',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _newCategoryController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter category name...',
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                                onSubmitted: (_) => _addCategory(),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
-                              onPressed: _addCategory,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                
-                // Categories list
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       // All categories section
                       Row(
@@ -428,7 +493,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                             ),
                           ),
                           Text(
-                            '${_getAllCategories().length} categories',
+                            '${categories.length} categories',
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppTheme.mediumGray,
@@ -437,25 +502,16 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                         ],
                       ),
                       const SizedBox(height: 8),
-                      
-                      if (_getAllCategories().isNotEmpty)
+
+                      if (categories.isNotEmpty)
                         Card(
                           child: ReorderableListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            onReorder: (oldIndex, newIndex) {
-                              setState(() {
-                                if (newIndex > oldIndex) {
-                                  newIndex -= 1;
-                                }
-                                final category = _categories.removeAt(oldIndex);
-                                _categories.insert(newIndex, category);
-                              });
-                              _saveCustomCategories();
-                            },
-                            children: _getAllCategories().map((category) {
+                            onReorder: (oldIndex, newIndex) => _reorderCategories(categories, oldIndex, newIndex),
+                            children: categories.map((category) {
                               return Dismissible(
-                                key: Key(category),
+                                key: Key(category.id),
                                 direction: DismissDirection.endToStart,
                                 confirmDismiss: (direction) async {
                                   await _deleteCategory(category);
@@ -475,12 +531,23 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                                   DismissDirection.endToStart: 0.9,
                                 },
                                 child: ListTile(
-                                  title: Text(category),
-                                  leading: Icon(
-                                    Icons.label,
-                                    color: CategoryColors.getCategoryColor(category),
+                                  title: Text(category.name),
+                                  leading: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.drag_handle,
+                                        color: AppTheme.mediumGray,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Icon(
+                                        category.icon ?? Icons.star,
+                                        color: category.color,
+                                      ),
+                                    ],
                                   ),
-                                  trailing: const Icon(Icons.drag_handle),
+                                  trailing: const Icon(Icons.edit),
                                   onTap: () => _editCategory(category),
                                 ),
                               );
@@ -519,13 +586,15 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
                             ),
                           ),
                         ),
-                      
+
                       const SizedBox(height: 32),
                     ],
                   ),
-                ),
-              ],
-            ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text('Error loading categories: $error'),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCategoryDialog,
         backgroundColor: AppTheme.pastelPink,
@@ -537,7 +606,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
 
   List<Color> _getColorOptions() {
     return [
-      const Color(0xFFF44336), // Red
+      const Color(0xFFE53935), // Bright Red
       const Color(0xFFFF4081), // Pink
       const Color(0xFFFF7043), // Deep Orange
       const Color(0xFFFFC107), // Amber
@@ -547,12 +616,35 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
       const Color(0xFF5C6BC0), // Indigo
       const Color(0xFFBA68C8), // Purple
       const Color(0xFFAA6E4B), // Brown
+      const Color(0xFF800020), // Burgundy
+      const Color(0xFF59341E), // Coffee Brown
       const Color(0xFF3A3A3A) // Black
     ];
   }
 
-  Future<void> _updateCategoryColor(String category, Color color) async {
-    await CategoryColors.setCategoryColor(category, color);
+  List<IconData> _getIconOptions() {
+    return [
+      Icons.favorite,           // Love/romantic
+      Icons.star,               // Special/favorite
+      Icons.celebration,        // Parties/celebrations
+      Icons.business,           // Office/work
+      Icons.school,             // Casual/educational
+      Icons.shopping_bag,       // Shopping/errands
+      Icons.coffee,             // Coffee dates
+      Icons.brunch_dining,      // Brunch with friends
+      Icons.restaurant,         // Dinner dates
+      Icons.wine_bar,           // Wine dates/bar
+      Icons.nightlife,          // Nightclub/cocktails
+      Icons.theater_comedy,     // Theater/shows
+      Icons.music_note,         // Concerts/music
+      Icons.beach_access,       // Beach/resort
+      Icons.directions_run,     // Running/gym
+      Icons.fitness_center,     // Gym/fitness
+      Icons.self_improvement,   // Yoga/wellness
+      Icons.spa,                // Spa/relaxation
+      Icons.weekend,            // Relaxed/comfy
+      Icons.pets,               // Pet-friendly outfits
+    ];
   }
 
   void _showInfoDialog() {

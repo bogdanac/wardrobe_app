@@ -8,6 +8,7 @@ import '../../core/themes/typography.dart';
 import '../../core/services/ml_outfit_recommender.dart';
 import '../providers/outfit_provider.dart';
 import '../providers/clothing_provider.dart';
+import '../providers/color_palette_provider.dart';
 import '../widgets/outfit_card.dart';
 import '../widgets/unified_filters.dart';
 import 'create_outfit_screen.dart';
@@ -23,16 +24,19 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
   List<String> _selectedCategories = [];
   Season _selectedSeason = Season.allSeason;
   List<WeatherRange> _selectedWeatherRanges = [];
-  List<String> _preferredColors = [];
-  MetallicElements? _selectedMetallicElements;
+  String? _selectedColorPaletteId;
   bool _isGenerating = false;
-  
+
   // ML-specific parameters
   String? _occasion;
   String? _mood;
   double? _temperature;
   bool _useMLRecommendations = false;
-  
+
+  // Text-based generation
+  final TextEditingController _textPromptController = TextEditingController();
+  bool _useTextPrompt = false;
+
   // ML Recommender
   MLOutfitRecommender? _mlRecommender;
 
@@ -40,6 +44,12 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
   void initState() {
     super.initState();
     _initializeMLRecommender();
+  }
+
+  @override
+  void dispose() {
+    _textPromptController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeMLRecommender() async {
@@ -66,36 +76,74 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildFiltersSection(),
-                  const Divider(),
-                  generatedOutfits.isEmpty
-                      ? _buildEmptyState()
-                      : _buildGeneratedOutfits(generatedOutfits),
-                ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                            MediaQuery.of(context).padding.top -
+                            kToolbarHeight -
+                            80, // Height of button container
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      _buildFiltersSection(),
+                      const Divider(),
+                      if (generatedOutfits.isEmpty)
+                        Expanded(child: _buildEmptyState())
+                      else
+                        _buildGeneratedOutfits(generatedOutfits),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Fixed generate button at bottom
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.lightGray,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isGenerating ? null : _generateOutfits,
+                  icon: _isGenerating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.shuffle),
+                  label: Text(
+                    _isGenerating ? 'Generating...' : 'Generate Outfits',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.darkerPink,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isGenerating ? null : _generateOutfits,
-        icon: _isGenerating
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlack),
-                ),
-              )
-            : const Icon(Icons.shuffle),
-        label: Text(
-          _isGenerating ? 'Generating...' : 'Generate Outfits',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
       ),
     );
   }
@@ -114,24 +162,27 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          _buildTextPromptSection(),
+          const SizedBox(height: 16),
           _buildMLToggle(),
           const SizedBox(height: 16),
           if (_useMLRecommendations) _buildMLControls(),
+          if (_useMLRecommendations) const SizedBox(height: 16),
           UnifiedFilters(
             showCategories: true,
             showSeasons: true,
             showWeather: true,
-            showColors: true,
+            showColors: false,
             showClothingTypes: false,
             showFavorites: false,
-            showMetallicElements: true,
+            showMetallicElements: false,
             selectedCategories: _selectedCategories,
             selectedSeasons: [_selectedSeason],
             selectedWeatherRanges: _selectedWeatherRanges,
-            selectedColors: _preferredColors,
+            selectedColors: const [],
             selectedTypes: const [],
             selectedFavorites: null,
-            selectedMetallicElements: _selectedMetallicElements,
+            selectedMetallicElements: null,
             onCategoriesChanged: (categories) {
               setState(() {
                 _selectedCategories = categories;
@@ -147,43 +198,52 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
                 _selectedWeatherRanges = ranges;
               });
             },
-            onColorsChanged: (colors) {
-              setState(() {
-                _preferredColors = colors;
-              });
-            },
+            onColorsChanged: (colors) {},
             onTypesChanged: (types) {},
             onFavoritesChanged: (favorites) {},
-            onMetallicElementsChanged: (elements) {
-              setState(() {
-                _selectedMetallicElements = elements;
-              });
-            },
+            onMetallicElementsChanged: (elements) {},
           ),
+          const SizedBox(height: 16),
+          _buildColorPaletteSection(),
         ],
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 48,
-            color: AppTheme.mediumGray,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No outfits generated yet',
-            style: TextStyle(
-              fontSize: 16,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              size: 64,
               color: AppTheme.mediumGray,
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            const Text(
+              'No outfits generated yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.mediumGray,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _useTextPrompt
+                ? 'Describe your outfit above and tap Generate'
+                : 'Set your preferences and tap Generate Outfits',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.mediumGray,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -212,7 +272,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           child: MasonryGridView.count(
             crossAxisCount: 2,
             itemCount: outfits.length,
@@ -228,6 +288,138 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildColorPaletteSection() {
+    final palettesAsync = ref.watch(allColorPalettesProvider);
+
+    return palettesAsync.when(
+      data: (palettes) {
+        if (palettes.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.lightGray.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.mediumGray.withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.palette_outlined, size: 32, color: AppTheme.mediumGray),
+                SizedBox(height: 8),
+                Text(
+                  'No color palettes available',
+                  style: TextStyle(fontSize: 14, color: AppTheme.mediumGray),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Create palettes in Settings to filter by colors',
+                  style: TextStyle(fontSize: 12, color: AppTheme.mediumGray),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final selectedPalette = _selectedColorPaletteId != null
+            ? palettes.firstWhere(
+                (p) => p.id == _selectedColorPaletteId,
+                orElse: () => palettes.first,
+              )
+            : null;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Color Palette',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.lightGray.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _selectedColorPaletteId != null
+                      ? AppTheme.pastelPink
+                      : AppTheme.mediumGray.withValues(alpha: 0.3),
+                  width: _selectedColorPaletteId != null ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String?>(
+                    value: _selectedColorPaletteId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select a color palette',
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: AppTheme.lightGray,
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      ...palettes.map((palette) {
+                        return DropdownMenuItem<String>(
+                          value: palette.id,
+                          child: Text(
+                            palette.name ?? 'Palette ${palette.colors.length} colors',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedColorPaletteId = value;
+                      });
+                    },
+                  ),
+                  if (selectedPalette != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: selectedPalette.colors.map((color) {
+                        return Expanded(
+                          child: Container(
+                            height: 40,
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -282,6 +474,88 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
     );
   }
 
+  Widget _buildTextPromptSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _useTextPrompt ? AppTheme.pastelPink.withValues(alpha: 0.1) : AppTheme.lightGray.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _useTextPrompt ? AppTheme.pastelPink : AppTheme.mediumGray.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline,
+                color: _useTextPrompt ? AppTheme.pastelPink : AppTheme.mediumGray,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Text-Based Generation',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: _useTextPrompt ? AppTheme.pastelPink : null,
+                      ),
+                    ),
+                    Text(
+                      'Describe your outfit in natural language',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppTheme.mediumGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _useTextPrompt,
+                onChanged: (value) {
+                  setState(() {
+                    _useTextPrompt = value;
+                    if (!value) {
+                      _textPromptController.clear();
+                    }
+                  });
+                },
+                activeColor: AppTheme.pastelPink,
+              ),
+            ],
+          ),
+          if (_useTextPrompt) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _textPromptController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'e.g., "I need a romantic outfit for a dinner date in winter" or "Something professional but stylish for a presentation"',
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.all(16),
+              ),
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tip: Mention occasion, weather, mood, or style preferences',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppTheme.mediumGray,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildMLControls() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -295,7 +569,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
         children: [
           const Text('Smart Context', style: AppTypography.labelLarge),
           const SizedBox(height: 12),
-          
+
           // Occasion selection
           const Text('Occasion', style: AppTypography.labelMedium),
           const SizedBox(height: 8),
@@ -319,9 +593,9 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
               ),
             )).toList(),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Mood selection
           const Text('Mood', style: AppTypography.labelMedium),
           const SizedBox(height: 8),
@@ -345,9 +619,9 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
               ),
             )).toList(),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Temperature slider
           const Text('Temperature', style: AppTypography.labelMedium),
           const SizedBox(height: 8),
@@ -364,7 +638,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
             },
             activeColor: AppTheme.pastelPink,
           ),
-          
+
           const SizedBox(height: 8),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -378,54 +652,189 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
     );
   }
 
+  Map<String, dynamic> _parseTextPrompt(String prompt) {
+    final lowerPrompt = prompt.toLowerCase();
+    final result = <String, dynamic>{};
+
+    // Parse outfit styles from your category constants
+    final outfitStyles = [
+      'scorpio venus', 'work', 'gym', 'pilates', 'high heels dance',
+      'comfy', 'walk friendly', 'tea date', 'brunch', 'wine date',
+      'romantic date', 'mall', 'holidays', 'festivals', 'ballet show',
+      'parties', 'formal'
+    ];
+
+    final matchedStyles = <String>[];
+    for (final style in outfitStyles) {
+      if (lowerPrompt.contains(style)) {
+        matchedStyles.add(style);
+      }
+    }
+
+    // Check for common keywords mapping to styles
+    if (lowerPrompt.contains('romantic') || lowerPrompt.contains('date night') || lowerPrompt.contains('dinner date')) {
+      if (!matchedStyles.contains('romantic date')) matchedStyles.add('romantic date');
+    }
+    if (lowerPrompt.contains('professional') || lowerPrompt.contains('office') || lowerPrompt.contains('presentation') || lowerPrompt.contains('meeting')) {
+      if (!matchedStyles.contains('work')) matchedStyles.add('work');
+    }
+    if (lowerPrompt.contains('party') || lowerPrompt.contains('celebration') || lowerPrompt.contains('nightclub')) {
+      if (!matchedStyles.contains('parties')) matchedStyles.add('parties');
+    }
+    if (lowerPrompt.contains('wedding') || lowerPrompt.contains('gala') || lowerPrompt.contains('black tie')) {
+      if (!matchedStyles.contains('formal')) matchedStyles.add('formal');
+    }
+    if (lowerPrompt.contains('workout') || lowerPrompt.contains('exercise') || lowerPrompt.contains('fitness')) {
+      if (!matchedStyles.contains('gym')) matchedStyles.add('gym');
+    }
+    if (lowerPrompt.contains('comfortable') || lowerPrompt.contains('comfy') || lowerPrompt.contains('casual') || lowerPrompt.contains('relaxed')) {
+      if (!matchedStyles.contains('comfy')) matchedStyles.add('comfy');
+    }
+    if (lowerPrompt.contains('shopping') || lowerPrompt.contains('errands')) {
+      if (!matchedStyles.contains('mall')) matchedStyles.add('mall');
+    }
+    if (lowerPrompt.contains('beach') || lowerPrompt.contains('vacation') || lowerPrompt.contains('holiday')) {
+      if (!matchedStyles.contains('holidays')) matchedStyles.add('holidays');
+    }
+    if (lowerPrompt.contains('brunch') || lowerPrompt.contains('café') || lowerPrompt.contains('coffee')) {
+      if (!matchedStyles.contains('brunch')) matchedStyles.add('brunch');
+    }
+
+    result['categories'] = matchedStyles.isNotEmpty ? matchedStyles : null;
+
+    // Parse season
+    if (lowerPrompt.contains('winter') || lowerPrompt.contains('cold')) {
+      result['season'] = Season.winter;
+    } else if (lowerPrompt.contains('summer') || lowerPrompt.contains('hot')) {
+      result['season'] = Season.summer;
+    } else if (lowerPrompt.contains('spring')) {
+      result['season'] = Season.spring;
+    } else if (lowerPrompt.contains('autumn') || lowerPrompt.contains('fall')) {
+      result['season'] = Season.autumn;
+    }
+
+    // Parse weather
+    final weatherRanges = <WeatherRange>[];
+    if (lowerPrompt.contains('very hot') || lowerPrompt.contains('scorching')) {
+      weatherRanges.add(WeatherRange.veryHot);
+    } else if (lowerPrompt.contains('hot') || lowerPrompt.contains('warm summer')) {
+      weatherRanges.add(WeatherRange.hot);
+    } else if (lowerPrompt.contains('warm') || lowerPrompt.contains('mild')) {
+      weatherRanges.add(WeatherRange.warm);
+    } else if (lowerPrompt.contains('cool') || lowerPrompt.contains('chilly')) {
+      weatherRanges.add(WeatherRange.cool);
+    } else if (lowerPrompt.contains('very cold') || lowerPrompt.contains('freezing')) {
+      weatherRanges.add(WeatherRange.veryCold);
+    } else if (lowerPrompt.contains('cold')) {
+      weatherRanges.add(WeatherRange.cold);
+    }
+
+    if (weatherRanges.isNotEmpty) {
+      result['weatherRanges'] = weatherRanges;
+    }
+
+    return result;
+  }
+
   Future<void> _generateOutfits() async {
     setState(() {
       _isGenerating = true;
     });
 
     try {
+      // Parse text prompt if enabled
+      Map<String, dynamic>? parsedPrompt;
+      if (_useTextPrompt && _textPromptController.text.trim().isNotEmpty) {
+        parsedPrompt = _parseTextPrompt(_textPromptController.text);
+      }
+
+      // Get colors from selected palette
+      List<String>? paletteColors;
+      if (_selectedColorPaletteId != null) {
+        final palettesAsync = ref.read(allColorPalettesProvider);
+        await palettesAsync.when(
+          data: (palettes) async {
+            final palette = palettes.firstWhere(
+              (p) => p.id == _selectedColorPaletteId,
+              orElse: () => palettes.first,
+            );
+            // Convert Color objects to hex strings
+            paletteColors = palette.colors
+                .map((c) => '#${c.value.toRadixString(16).padLeft(8, '0').substring(2)}')
+                .toList();
+          },
+          loading: () {},
+          error: (_, __) {},
+        );
+      }
+
+      // Combine parameters from text prompt AND manual selection
+      List<String>? categories;
+      if (parsedPrompt?['categories'] != null || _selectedCategories.isNotEmpty) {
+        final promptCategories = parsedPrompt?['categories'] as List<String>? ?? [];
+        final combined = {...promptCategories, ..._selectedCategories}.toList();
+        categories = combined.isEmpty ? null : combined;
+      }
+
+      // Use text prompt season if specified, otherwise use manual selection
+      final season = parsedPrompt?['season'] as Season? ?? _selectedSeason;
+
+      // Combine weather ranges from both sources
+      List<WeatherRange>? weatherRanges;
+      if (parsedPrompt?['weatherRanges'] != null || _selectedWeatherRanges.isNotEmpty) {
+        final promptRanges = parsedPrompt?['weatherRanges'] as List<WeatherRange>? ?? [];
+        final combined = {...promptRanges, ..._selectedWeatherRanges}.toList();
+        weatherRanges = combined.isEmpty ? null : combined;
+      }
+
       if (_useMLRecommendations && _mlRecommender != null) {
         // Use ML-powered recommendations
         final outfits = await _mlRecommender!.generateRecommendations(
           count: 6,
-          season: _selectedSeason != Season.allSeason ? _selectedSeason : null,
-          weatherRanges: _selectedWeatherRanges.isEmpty ? null : _selectedWeatherRanges,
+          season: season != Season.allSeason ? season : null,
+          weatherRanges: weatherRanges,
           occasion: _occasion,
-          preferredColors: _preferredColors.isEmpty ? null : _preferredColors,
+          preferredColors: paletteColors,
           temperature: _temperature,
           mood: _mood,
         );
-        
+
         // Update the provider with ML-generated outfits
         ref.read(generatedOutfitsProvider.notifier).setOutfits(outfits);
       } else {
         // Use traditional generation
         await ref.read(generatedOutfitsProvider.notifier).generateOutfits(
           count: 6,
-          categories: _selectedCategories.isEmpty ? null : _selectedCategories,
-          season: _selectedSeason,
-          weatherRanges: _selectedWeatherRanges.isEmpty ? null : _selectedWeatherRanges,
-          preferredColors: _preferredColors.isEmpty ? null : _preferredColors,
+          categories: categories,
+          season: season,
+          weatherRanges: weatherRanges,
+          preferredColors: paletteColors,
         );
       }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Outfits generated successfully! ✨'),
-          backgroundColor: AppTheme.pastelPink,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Outfits generated successfully!'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate outfits: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate outfits: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isGenerating = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
+      }
     }
   }
 
@@ -497,7 +906,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
       _selectedCategories.clear();
       _selectedSeason = Season.allSeason;
       _selectedWeatherRanges.clear();
-      _preferredColors.clear();
+      _selectedColorPaletteId = null;
     });
     ref.read(generatedOutfitsProvider.notifier).clearGenerated();
   }

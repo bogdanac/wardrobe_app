@@ -3,6 +3,7 @@ import '../../domain/entities/clothing_item.dart';
 import '../../domain/repositories/clothing_repository.dart';
 import '../../data/repositories/firebase_clothing_repository.dart';
 import 'auth_provider.dart';
+import 'settings_provider.dart';
 
 final clothingRepositoryProvider = Provider<ClothingRepository>((ref) {
   // Get the current user ID from auth provider
@@ -118,16 +119,27 @@ final clothingFilterProvider = StateNotifierProvider<ClothingFilterNotifier, Clo
 final filteredClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) async {
   final repository = ref.read(clothingRepositoryProvider);
   final filter = ref.watch(clothingFilterProvider);
+  final settings = ref.watch(settingsProvider);
+
+  // Apply global season filter from settings if no local filter is set
+  final effectiveSeason = filter.season ?? settings.currentSeason;
 
   List<ClothingItem> items;
 
   if (filter.searchQuery.isNotEmpty) {
     items = await repository.searchClothingItems(filter.searchQuery);
+
+    // Apply season filter to search results
+    if (effectiveSeason != null) {
+      items = items.where((item) =>
+        item.seasons.contains(effectiveSeason) || item.seasons.contains(Season.allSeason)
+      ).toList();
+    }
   } else {
     items = await repository.filterClothingItems(
       types: filter.types.isEmpty ? null : filter.types,
       categories: filter.categories.isEmpty ? null : filter.categories,
-      season: filter.season,
+      season: effectiveSeason,
       weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
       colors: filter.colors.isEmpty ? null : filter.colors,
     );

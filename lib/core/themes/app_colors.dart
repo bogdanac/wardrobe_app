@@ -75,52 +75,7 @@ class AppColors {
   static const Color neutral700 = Color(0xFF404040);
   static const Color neutral800 = Color(0xFF262626);
   static const Color neutral900 = Color(0xFF171717);
-  
-  // Color categories for clothing
-  static const Map<String, Color> clothingColors = {
-    // Basic colors
-    'black': Color(0xFF000000),
-    'white': Color(0xFFFFFFFF),
-    'gray': Color(0xFF808080),
-    'brown': Color(0xFFA0522D),
-    'beige': Color(0xFFF5F5DC),
-    'cream': Color(0xFFF5F5DC),
-    
-    // Primary colors
-    'red': Color(0xFFFF0000),
-    'blue': Color(0xFF0000FF),
-    'yellow': Color(0xFFFFFF00),
-    
-    // Secondary colors
-    'green': Color(0xFF008000),
-    'orange': Color(0xFFFFA500),
-    'purple': Color(0xFF800080),
-    'pink': Color(0xFFFFC0CB),
-    
-    // Pastel colors
-    'pastel_pink': Color(0xFFFFB3D1),
-    'pastel_blue': Color(0xFFADD8E6),
-    'pastel_green': Color(0xFF90EE90),
-    'pastel_yellow': Color(0xFFFFFFE0),
-    'pastel_purple': Color(0xFFDDA0DD),
-    
-    // Earth tones
-    'olive': Color(0xFF808000),
-    'khaki': Color(0xFFF0E68C),
-    'tan': Color(0xFFD2B48C),
-    'rust': Color(0xFFB7410E),
-    'burgundy': Color(0xFF800020),
-    'navy': Color(0xFF000080),
-    'forest_green': Color(0xFF228B22),
-    'maroon': Color(0xFF800000),
-    
-    // Metallics
-    'gold': Color(0xFFFFD700),
-    'silver': Color(0xFFC0C0C0),
-    'copper': Color(0xFFB87333),
-    'bronze': Color(0xFFCD7F32),
-  };
-  
+
   // Get colors for a specific season
   static List<Color> getSeasonalColors(Season season) {
     return seasonalPalettes[season] ?? seasonalPalettes[Season.allSeason] ?? [];
@@ -158,43 +113,61 @@ class AppColors {
   static bool areColorsCompatible(Color color1, Color color2) {
     final hsl1 = HSLColor.fromColor(color1);
     final hsl2 = HSLColor.fromColor(color2);
-    
+
     // Same color family
     if ((hsl1.hue - hsl2.hue).abs() < 30) return true;
-    
+
     // Complementary colors
     if ((hsl1.hue - hsl2.hue).abs() > 150 && (hsl1.hue - hsl2.hue).abs() < 210) return true;
-    
+
     // One is neutral
     if (hsl1.saturation < 0.1 || hsl2.saturation < 0.1) return true;
-    
+
     // Analogous colors
     if ((hsl1.hue - hsl2.hue).abs() < 60) return true;
-    
+
     return false;
   }
-  
-  // Get color name from hex value (approximate)
+
+  // Get basic color name from HSL values (simple approximation for analytics)
+  // Note: For accurate color names, use ColorPaletteService.findClosestColor
   static String getColorName(Color color) {
-    double minDistance = double.infinity;
-    String closestColorName = 'unknown';
-    
-    for (final entry in clothingColors.entries) {
-      final distance = _colorDistance(color, entry.value);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestColorName = entry.key;
-      }
+    final hsl = HSLColor.fromColor(color);
+    final hue = hsl.hue;
+    final saturation = hsl.saturation;
+    final lightness = hsl.lightness;
+
+    // Check for neutrals first
+    if (saturation < 0.1) {
+      if (lightness > 0.9) return 'white';
+      if (lightness < 0.1) return 'black';
+      if (lightness > 0.6) return 'light gray';
+      if (lightness < 0.4) return 'dark gray';
+      return 'gray';
     }
-    
-    return closestColorName.replaceAll('_', ' ');
-  }
-  
-  // Calculate distance between two colors
-  static double _colorDistance(Color c1, Color c2) {
-    final r = (c1.r * 255.0).round() - (c2.r * 255.0).round();
-    final g = (c1.g * 255.0).round() - (c2.g * 255.0).round();
-    final b = (c1.b * 255.0).round() - (c2.b * 255.0).round();
-    return (r * r + g * g + b * b).toDouble();
+
+    // Check for pastels
+    final isPastel = lightness > 0.7 && saturation < 0.5;
+
+    // Determine hue-based color
+    if (hue < 15 || hue >= 345) {
+      return isPastel ? 'pastel pink' : (lightness > 0.6 ? 'pink' : 'red');
+    } else if (hue < 45) {
+      return isPastel ? 'pastel peach' : (lightness > 0.7 ? 'cream' : 'orange');
+    } else if (hue < 75) {
+      return isPastel ? 'pastel yellow' : 'yellow';
+    } else if (hue < 150) {
+      return isPastel ? 'pastel green' : (lightness < 0.4 ? 'forest green' : 'green');
+    } else if (hue < 200) {
+      return isPastel ? 'pastel turquoise' : 'blue';
+    } else if (hue < 260) {
+      return isPastel ? 'pastel blue' : (lightness < 0.3 ? 'navy' : 'blue');
+    } else if (hue < 280) {
+      return isPastel ? 'lavender' : 'purple';
+    } else if (hue < 330) {
+      return isPastel ? 'pastel purple' : (saturation > 0.8 ? 'fuchsia' : 'purple');
+    } else {
+      return isPastel ? 'pastel pink' : 'pink';
+    }
   }
 }

@@ -633,7 +633,7 @@ class ImageService {
     }
   }
 
-  Future<List<Color>> extractColors(File imageFile, {int maxColors = 3}) async {
+  Future<List<Color>> extractColors(File imageFile, {required dynamic customColorRepository, int maxColors = 3}) async {
     try {
       final imageProvider = FileImage(imageFile);
       final paletteGenerator = await PaletteGenerator.fromImageProvider(
@@ -658,14 +658,14 @@ class ImageService {
       }
 
       // Map detected colors to custom palette
-      final colorService = ColorPaletteService();
+      final colorService = ColorPaletteService(customColorRepository);
       final mappedColors = <Color>[];
       final usedPaletteColors = <Color>{};
 
       for (final detectedColor in detectedColors) {
         if (mappedColors.length >= maxColors) break;
 
-        final closestMatch = colorService.findClosestColor(detectedColor);
+        final closestMatch = await colorService.findClosestColor(detectedColor);
         final matchedColor = _hexToColor(closestMatch['hex']!);
 
         // Only add if we haven't used this palette color yet

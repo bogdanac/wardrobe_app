@@ -1,100 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import '../../domain/repositories/custom_color_repository.dart';
 
 class ColorPaletteService {
-  static const String _colorsKey = 'custom_color_palette';
+  final CustomColorRepository _colorRepository;
 
-  // Default color palette with names and hex values
-  static final List<Map<String, String>> _defaultColors = [
-    {'name': 'white', 'hex': '#FFFFFF'},
-    {'name': 'gray', 'hex': '#6B6B6B'},
-    {'name': 'cream', 'hex': '#E8E3D6'},
-    {'name': 'beige', 'hex': '#A89074'},
-    {'name': 'pastel yellow', 'hex': '#FDFD96'},
-    {'name': 'pastel peach', 'hex': '#FF7F6E'},
-    {'name': 'pastel pink', 'hex': '#FFB6C1'},
-    {'name': 'dust pink', 'hex': '#C08585'},
-    {'name': 'pastel green', 'hex': '#77DD77'},
-    {'name': 'pastel blue', 'hex': '#89CFF0'},
-    {'name': 'lavender', 'hex': '#C8A2C8'},
-    {'name': 'fuchsia', 'hex': '#FF69B4'},
-    {'name': 'red', 'hex': '#FF0000'},
-    {'name': 'burgundy', 'hex': '#800020'},
-    {'name': 'purple', 'hex': '#9370DB'},
-    {'name': 'royal blue', 'hex': '#2C5AA0'},
-    {'name': 'navy', 'hex': '#001F3F'},
-    {'name': 'coffee', 'hex': '#4A3728'},
-    {'name': 'black', 'hex': '#000000'},
-  ];
+  ColorPaletteService(this._colorRepository);
 
+  /// Get all colors from repository (for backward compatibility)
   Future<List<Map<String, String>>> getColors() async {
-    final prefs = await SharedPreferences.getInstance();
-    final colorsJson = prefs.getString(_colorsKey);
-
-    if (colorsJson == null) {
-      // Return default colors if none saved
-      return List.from(_defaultColors);
-    }
-
-    try {
-      final List<dynamic> decoded = json.decode(colorsJson);
-      return decoded.map((item) => Map<String, String>.from(item)).toList();
-    } catch (e) {
-      return List.from(_defaultColors);
-    }
-  }
-
-  Future<void> saveColors(List<Map<String, String>> colors) async {
-    final prefs = await SharedPreferences.getInstance();
-    final colorsJson = json.encode(colors);
-    await prefs.setString(_colorsKey, colorsJson);
-  }
-
-  Future<void> addColor(String name, String hex) async {
-    final colors = await getColors();
-    colors.add({'name': name, 'hex': hex});
-    await saveColors(colors);
-  }
-
-  Future<void> updateColor(int index, String name, String hex) async {
-    final colors = await getColors();
-    if (index >= 0 && index < colors.length) {
-      colors[index] = {'name': name, 'hex': hex};
-      await saveColors(colors);
-    }
-  }
-
-  Future<void> deleteColor(int index) async {
-    final colors = await getColors();
-    if (index >= 0 && index < colors.length) {
-      colors.removeAt(index);
-      await saveColors(colors);
-    }
-  }
-
-  Future<void> resetToDefaults() async {
-    await saveColors(List.from(_defaultColors));
+    final customColors = await _colorRepository.getAllColors();
+    return customColors.map((c) => {'name': c.name, 'hex': c.hex}).toList();
   }
 
   /// Find the closest color from the palette to a given color
-  Map<String, String> findClosestColor(Color targetColor) {
-    final colors = _defaultColors; // Use sync version for now
+  Future<Map<String, String>> findClosestColor(Color targetColor) async {
+    final customColors = await _colorRepository.getAllColors();
+
+    // If no custom colors, use defaults
+    if (customColors.isEmpty) {
+      return _findClosestColorFromDefaults(targetColor);
+    }
 
     double minDistance = double.infinity;
-    Map<String, String> closestColor = colors.first;
+    Map<String, String> closestColor = {'name': customColors.first.name, 'hex': customColors.first.hex};
 
-    for (final colorData in colors) {
-      final paletteColor = _hexToColor(colorData['hex']!);
-      final distance = _colorDistance(targetColor, paletteColor);
+    for (final customColor in customColors) {
+      final distance = _colorDistance(targetColor, customColor.color);
 
       if (distance < minDistance) {
         minDistance = distance;
-        closestColor = colorData;
+        closestColor = {'name': customColor.name, 'hex': customColor.hex};
       }
     }
 
     return closestColor;
+  }
+
+  /// Find the closest color from defaults (fallback)
+  Map<String, String> _findClosestColorFromDefaults(Color targetColor) {
+    // Simple fallback - return black or white based on brightness
+    final brightness = (targetColor.red * 299 + targetColor.green * 587 + targetColor.blue * 114) / 1000;
+    if (brightness > 128) {
+      return {'name': 'white', 'hex': '#FFFFFF'};
+    } else {
+      return {'name': 'black', 'hex': '#000000'};
+    }
   }
 
   /// Calculate color distance using Euclidean distance in RGB space
@@ -105,13 +55,6 @@ class ColorPaletteService {
     return (rDiff * rDiff + gDiff * gDiff + bDiff * bDiff).toDouble();
   }
 
-  Color _hexToColor(String hex) {
-    try {
-      return Color(int.parse(hex.substring(1), radix: 16) + 0xFF000000);
-    } catch (e) {
-      return Colors.grey;
-    }
-  }
 
   String colorToHex(Color color) {
     return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
