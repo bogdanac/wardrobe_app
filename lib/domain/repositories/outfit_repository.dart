@@ -25,4 +25,8 @@ abstract class OutfitRepository {
   Future<void> archiveOutfit(String id);
   Future<void> unarchiveOutfit(String id);
   Future<List<Outfit>> getArchivedOutfits();
+
+  // Variant management
+  Future<List<Outfit>> getOutfitVariants(String parentOutfitId);
+  Future<void> updateVariantCount(String outfitId, int count);
 }

@@ -79,10 +79,25 @@ class FirebaseClothingRepository implements ClothingRepository {
 
   @override
   Future<List<ClothingItem>> getAllClothingItems() async {
-    final snapshot = await _collection
-        .where('isArchived', isEqualTo: false)
-        .get();
-    return snapshot.docs.map(_fromFirestore).toList();
+    // Return empty list if user is not authenticated
+    if (_userId == null) {
+      return [];
+    }
+
+    try {
+      final snapshot = await _collection
+          .where('isArchived', isEqualTo: false)
+          .get()
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Firestore query timed out');
+            },
+          );
+      return snapshot.docs.map(_fromFirestore).toList();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   @override
@@ -131,6 +146,9 @@ class FirebaseClothingRepository implements ClothingRepository {
 
   @override
   Future<List<ClothingItem>> searchClothingItems(String query) async {
+    // Return empty list if user is not authenticated
+    if (_userId == null) return [];
+
     final snapshot = await _collection
         .where('isArchived', isEqualTo: false)
         .get();
@@ -150,6 +168,11 @@ class FirebaseClothingRepository implements ClothingRepository {
     List<WeatherRange>? weatherRanges,
     List<String>? colors,
   }) async {
+    // Return empty list if user is not authenticated
+    if (_userId == null) {
+      return [];
+    }
+
     Query query = _collection.where('isArchived', isEqualTo: false);
 
     if (types != null && types.isNotEmpty) {
@@ -157,33 +180,42 @@ class FirebaseClothingRepository implements ClothingRepository {
     }
 
     // Note: season parameter kept for backward compatibility but filtering done client-side
-    final snapshot = await query.get();
-    var items = snapshot.docs.map(_fromFirestore).toList();
+    try {
+      final snapshot = await query.get().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Firestore filter query timed out');
+        },
+      );
+      var items = snapshot.docs.map(_fromFirestore).toList();
 
-    // Client-side season filtering - include items with allSeason
-    if (season != null) {
-      items = items.where((item) =>
-        item.seasons.contains(season) || item.seasons.contains(Season.allSeason)
-      ).toList();
+      // Client-side season filtering - include items with allSeason
+      if (season != null) {
+        items = items.where((item) =>
+          item.seasons.contains(season) || item.seasons.contains(Season.allSeason)
+        ).toList();
+      }
+
+      // Client-side filtering for complex queries
+      if (categories != null && categories.isNotEmpty) {
+        items = items.where((item) =>
+            item.categories.any((cat) => categories.contains(cat))).toList();
+      }
+
+      if (weatherRanges != null && weatherRanges.isNotEmpty) {
+        items = items.where((item) =>
+            item.weatherRanges.any((wr) => weatherRanges.contains(wr))).toList();
+      }
+
+      if (colors != null && colors.isNotEmpty) {
+        items = items.where((item) =>
+            item.colors.any((color) => colors.contains(color))).toList();
+      }
+
+      return items;
+    } catch (e) {
+      rethrow;
     }
-
-    // Client-side filtering for complex queries
-    if (categories != null && categories.isNotEmpty) {
-      items = items.where((item) =>
-          item.categories.any((cat) => categories.contains(cat))).toList();
-    }
-
-    if (weatherRanges != null && weatherRanges.isNotEmpty) {
-      items = items.where((item) =>
-          item.weatherRanges.any((wr) => weatherRanges.contains(wr))).toList();
-    }
-
-    if (colors != null && colors.isNotEmpty) {
-      items = items.where((item) =>
-          item.colors.any((color) => colors.contains(color))).toList();
-    }
-
-    return items;
   }
 
   @override
@@ -198,6 +230,25 @@ class FirebaseClothingRepository implements ClothingRepository {
 
   @override
   Future<void> deleteClothingItem(String id) async {
+    // Archive all outfits containing this clothing item
+    final outfitsCollection = _userId != null
+        ? _firestore.collection('users/$_userId/outfits')
+        : _firestore.collection('outfits');
+
+    final outfitsSnapshot = await outfitsCollection
+        .where('clothingItemIds', arrayContains: id)
+        .get();
+
+    // Archive each outfit that contains this item
+    for (final doc in outfitsSnapshot.docs) {
+      await doc.reference.update({
+        'isArchived': true,
+        'dateArchived': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
+
+    // Delete the clothing item
     final snapshot = await _collection.where('id', isEqualTo: id).get();
     for (final doc in snapshot.docs) {
       await doc.reference.delete();

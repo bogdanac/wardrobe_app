@@ -17,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
 
   bool _isLoading = false;
-  bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
 
@@ -34,17 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (_isSignUp) {
-        await _authService.signUpWithEmail(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      } else {
-        await _authService.signInWithEmail(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      }
+      await _authService.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -149,20 +141,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
 
                   // Title
-                  Text(
-                    _isSignUp ? 'Create Account' : 'Welcome Back',
-                    style: const TextStyle(
+                  const Text(
+                    'Welcome Back',
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _isSignUp
-                        ? 'Sign up to sync your wardrobe across devices'
-                        : 'Sign in to access your wardrobe',
-                    style: const TextStyle(
+                  const Text(
+                    'Sign in to access your wardrobe',
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppTheme.mediumGray,
                     ),
@@ -210,23 +200,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (_isSignUp && value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
                       return null;
                     },
                   ),
                   const SizedBox(height: 8),
 
                   // Forgot Password
-                  if (!_isSignUp)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _resetPassword,
-                        child: const Text('Forgot Password?'),
-                      ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _resetPassword,
+                      child: const Text('Forgot Password?'),
                     ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Submit Button
@@ -243,36 +229,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(
-                            _isSignUp ? 'Sign Up' : 'Sign In',
-                            style: const TextStyle(
+                        : const Text(
+                            'Sign In',
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Toggle Sign Up/Sign In
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isSignUp
-                            ? 'Already have an account?'
-                            : "Don't have an account?",
-                        style: const TextStyle(color: AppTheme.mediumGray),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          setState(() => _isSignUp = !_isSignUp);
-                        },
-                        child: Text(_isSignUp ? 'Sign In' : 'Sign Up'),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 32),
 
                   // Divider
                   const Row(

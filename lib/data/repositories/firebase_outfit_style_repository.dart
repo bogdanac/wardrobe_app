@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/entities/outfit_style.dart';
 import '../../domain/repositories/outfit_style_repository.dart';
 
@@ -32,7 +33,9 @@ class FirebaseOutfitStyleRepository implements OutfitStyleRepository {
       return snapshot.docs.map(_fromFirestore).toList();
     } catch (e) {
       // If orderBy fails (e.g., missing order field), fall back to unordered query
-      print('Warning: orderBy failed, fetching outfit styles without order: $e');
+      if (kDebugMode) {
+        print('Warning: orderBy failed, fetching outfit styles without order: $e');
+      }
       final snapshot = await _collection.get();
       return snapshot.docs.map(_fromFirestore).toList();
     }

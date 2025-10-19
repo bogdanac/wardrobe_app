@@ -35,6 +35,8 @@ class FirebaseOutfitRepository implements OutfitRepository {
       'notes': outfit.notes,
       'isArchived': outfit.isArchived,
       'dateArchived': outfit.dateArchived?.toIso8601String(),
+      'parentOutfitId': outfit.parentOutfitId,
+      'variantCount': outfit.variantCount,
     };
   }
 
@@ -67,11 +69,16 @@ class FirebaseOutfitRepository implements OutfitRepository {
       dateArchived: data['dateArchived'] != null
           ? DateTime.parse(data['dateArchived'] as String)
           : null,
+      parentOutfitId: data['parentOutfitId'] as String?,
+      variantCount: data['variantCount'] as int? ?? 0,
     );
   }
 
   @override
   Future<List<Outfit>> getAllOutfits() async {
+    // Return empty list if user is not authenticated
+    if (_userId == null) return [];
+
     final snapshot = await _collection
         .where('isArchived', isEqualTo: false)
         .get();
@@ -115,6 +122,9 @@ class FirebaseOutfitRepository implements OutfitRepository {
 
   @override
   Future<List<Outfit>> searchOutfits(String query) async {
+    // Return empty list if user is not authenticated
+    if (_userId == null) return [];
+
     final snapshot = await _collection
         .where('isArchived', isEqualTo: false)
         .get();
@@ -134,6 +144,9 @@ class FirebaseOutfitRepository implements OutfitRepository {
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
   }) async {
+    // Return empty list if user is not authenticated
+    if (_userId == null) return [];
+
     Query query = _collection.where('isArchived', isEqualTo: false);
 
     if (isFavorite != null) {
@@ -143,9 +156,11 @@ class FirebaseOutfitRepository implements OutfitRepository {
     final snapshot = await query.get();
     var outfits = snapshot.docs.map(_fromFirestore).toList();
 
-    // Client-side season filtering
+    // Client-side season filtering (include allSeason items)
     if (season != null) {
-      outfits = outfits.where((outfit) => outfit.seasons.contains(season)).toList();
+      outfits = outfits.where((outfit) =>
+        outfit.seasons.contains(season) || outfit.seasons.contains(Season.allSeason)
+      ).toList();
     }
 
     // Client-side filtering for complex queries
@@ -260,5 +275,27 @@ class FirebaseOutfitRepository implements OutfitRepository {
         .where('isArchived', isEqualTo: true)
         .get();
     return snapshot.docs.map(_fromFirestore).toList();
+  }
+
+  // Get all variants of a base outfit
+  @override
+  Future<List<Outfit>> getOutfitVariants(String parentOutfitId) async {
+    final snapshot = await _collection
+        .where('parentOutfitId', isEqualTo: parentOutfitId)
+        .orderBy('createdAt', descending: false)
+        .get();
+    return snapshot.docs.map(_fromFirestore).toList();
+  }
+
+  // Update variant count for a base outfit
+  @override
+  Future<void> updateVariantCount(String outfitId, int count) async {
+    final snapshot = await _collection.where('id', isEqualTo: outfitId).limit(1).get();
+    if (snapshot.docs.isNotEmpty) {
+      await snapshot.docs.first.reference.update({
+        'variantCount': count,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
   }
 }

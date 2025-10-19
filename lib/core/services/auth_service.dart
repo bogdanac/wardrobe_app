@@ -34,20 +34,24 @@ class AuthService {
     }
   }
 
-  /// Sign up with email and password
+  /// Sign up with email and password - DISABLED
+  /// New user registration is disabled for this app
   Future<UserCredential?> signUpWithEmail({
     required String email,
     required String password,
   }) async {
-    try {
-      return await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Sign up error: ${e.code} - ${e.message}');
-      rethrow;
-    }
+    throw Exception('New user registration is disabled. Please contact the app administrator.');
+
+    // Original code kept for reference if you need to re-enable:
+    // try {
+    //   return await _auth.createUserWithEmailAndPassword(
+    //     email: email,
+    //     password: password,
+    //   );
+    // } on FirebaseAuthException catch (e) {
+    //   debugPrint('Sign up error: ${e.code} - ${e.message}');
+    //   rethrow;
+    // }
   }
 
   /// Sign in with Google

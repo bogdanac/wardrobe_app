@@ -17,30 +17,36 @@ final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
 });
 
 final outfitGeneratorProvider = Provider<OutfitGeneratorService>((ref) {
-  final clothingRepository = ref.read(clothingRepositoryProvider);
+  final clothingRepository = ref.watch(clothingRepositoryProvider);
   return OutfitGeneratorService(clothingRepository);
 });
 
 // Enhanced outfit generator with dynamic color loading and smart neutral handling
 final enhancedOutfitGeneratorProvider = Provider<EnhancedOutfitGenerator>((ref) {
-  final clothingRepository = ref.read(clothingRepositoryProvider);
-  final colorRepository = ref.read(customColorRepositoryProvider);
+  final clothingRepository = ref.watch(clothingRepositoryProvider);
+  final colorRepository = ref.watch(customColorRepositoryProvider);
   return EnhancedOutfitGenerator(clothingRepository, colorRepository);
 });
 
 final allOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {
-  final repository = ref.read(outfitRepositoryProvider);
+  final repository = ref.watch(outfitRepositoryProvider);
   return repository.getAllOutfits();
 });
 
 final outfitByIdProvider = FutureProvider.family<Outfit?, String>((ref, id) async {
-  final repository = ref.read(outfitRepositoryProvider);
+  final repository = ref.watch(outfitRepositoryProvider);
   return repository.getOutfitById(id);
 });
 
 final favoriteOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {
-  final repository = ref.read(outfitRepositoryProvider);
+  final repository = ref.watch(outfitRepositoryProvider);
   return repository.getFavoriteOutfits();
+});
+
+// Get all variants for a specific outfit
+final outfitVariantsProvider = FutureProvider.family<List<Outfit>, String>((ref, parentOutfitId) async {
+  final repository = ref.watch(outfitRepositoryProvider);
+  return repository.getOutfitVariants(parentOutfitId);
 });
 
 class OutfitFilterState {
@@ -116,7 +122,7 @@ final outfitFilterProvider = StateNotifierProvider<OutfitFilterNotifier, OutfitF
 });
 
 final filteredOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {
-  final repository = ref.read(outfitRepositoryProvider);
+  final repository = ref.watch(outfitRepositoryProvider);
   final filter = ref.watch(outfitFilterProvider);
 
   List<Outfit> outfits;

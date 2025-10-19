@@ -418,43 +418,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Background Removal Method'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: RemovalMethod.values.map((method) {
-            final isAiAvailable = ApiConfig.isRemoveBgConfigured;
-            final canSelect = method != RemovalMethod.ai || isAiAvailable;
-            
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Radio<RemovalMethod>(
+        content: RadioGroup<RemovalMethod>(
+          groupValue: currentMethod,
+          onChanged: (RemovalMethod? value) {
+            if (value != null) {
+              _updateBackgroundRemovalMethod(value);
+              Navigator.pop(context);
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: RemovalMethod.values.map((method) {
+              final isAiAvailable = ApiConfig.isRemoveBgConfigured;
+              final canSelect = method != RemovalMethod.ai || isAiAvailable;
+
+              return RadioListTile<RemovalMethod>(
+                contentPadding: EdgeInsets.zero,
                 value: method,
-                groupValue: currentMethod,
-                onChanged: canSelect ? (value) {
-                  if (value != null) {
-                    _updateBackgroundRemovalMethod(value);
-                    Navigator.pop(context);
-                  }
-                } : null,
-              ),
-              title: Text(
-                BackgroundRemovalConfig.getMethodDisplayName(method),
-                style: TextStyle(
-                  color: canSelect ? null : AppTheme.mediumGray,
+                enabled: canSelect,
+                title: Text(
+                  BackgroundRemovalConfig.getMethodDisplayName(method),
+                  style: TextStyle(
+                    color: canSelect ? null : AppTheme.mediumGray,
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                BackgroundRemovalConfig.getMethodDescription(method),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: canSelect ? AppTheme.mediumGray : AppTheme.mediumGray.withValues(alpha: 0.6),
+                subtitle: Text(
+                  BackgroundRemovalConfig.getMethodDescription(method),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: canSelect ? AppTheme.mediumGray : AppTheme.mediumGray.withValues(alpha: 0.6),
+                  ),
                 ),
-              ),
-              onTap: canSelect ? () {
-                _updateBackgroundRemovalMethod(method);
-                Navigator.pop(context);
-              } : null,
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
         actions: [
           TextButton(
@@ -694,6 +691,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return; // User cancelled
       }
 
+      if (!mounted) return;
+
       // Ask if user has ZIP file (optional for old Isar backups)
       final hasZip = await showDialog<bool>(
         context: context,
@@ -857,60 +856,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Current Season'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<Season?>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('None (Show all items)'),
-              value: null,
-              groupValue: currentSeason,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setCurrentSeason(null);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<Season?>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Spring'),
-              value: Season.spring,
-              groupValue: currentSeason,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setCurrentSeason(Season.spring);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<Season?>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Summer'),
-              value: Season.summer,
-              groupValue: currentSeason,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setCurrentSeason(Season.summer);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<Season?>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Autumn'),
-              value: Season.autumn,
-              groupValue: currentSeason,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setCurrentSeason(Season.autumn);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<Season?>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Winter'),
-              value: Season.winter,
-              groupValue: currentSeason,
-              onChanged: (value) {
-                ref.read(settingsProvider.notifier).setCurrentSeason(Season.winter);
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        content: RadioGroup<Season?>(
+          groupValue: currentSeason,
+          onChanged: (Season? value) {
+            ref.read(settingsProvider.notifier).setCurrentSeason(value);
+            Navigator.pop(context);
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<Season?>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('None (Show all items)'),
+                value: null,
+              ),
+              RadioListTile<Season?>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Spring'),
+                value: Season.spring,
+              ),
+              RadioListTile<Season?>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Summer'),
+                value: Season.summer,
+              ),
+              RadioListTile<Season?>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Autumn'),
+                value: Season.autumn,
+              ),
+              RadioListTile<Season?>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Winter'),
+                value: Season.winter,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

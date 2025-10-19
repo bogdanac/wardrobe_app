@@ -4,10 +4,9 @@ import '../../domain/entities/clothing_item.dart';
 import '../../domain/entities/custom_color.dart';
 import '../../core/themes/app_theme.dart';
 import '../providers/custom_color_provider.dart';
-import '../providers/settings_provider.dart';
 import '../providers/category_provider.dart';
 
-class MinimalistFilters extends ConsumerStatefulWidget {
+class MinimalistClothingItemFilters extends ConsumerStatefulWidget {
   final List<ClothingType> selectedTypes;
   final Season? selectedSeason;
   final List<String> selectedColors;
@@ -17,7 +16,7 @@ class MinimalistFilters extends ConsumerStatefulWidget {
   final Function(List<String>) onColorsChanged;
   final Function(List<String>) onCategoriesChanged;
 
-  const MinimalistFilters({
+  const MinimalistClothingItemFilters({
     super.key,
     required this.selectedTypes,
     this.selectedSeason,
@@ -30,27 +29,27 @@ class MinimalistFilters extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MinimalistFilters> createState() => _MinimalistFiltersState();
+  ConsumerState<MinimalistClothingItemFilters> createState() => _MinimalistClothingItemFiltersState();
 }
 
-class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
+class _MinimalistClothingItemFiltersState extends ConsumerState<MinimalistClothingItemFilters> {
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(0),
       child: Column(
         children: [
           // Type dropdown
           _buildTypeDropdown(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 3),
           // Row with other dropdowns
           Row(
             children: [
               Expanded(child: _buildCategoryDropdown()),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
               Expanded(child: _buildSeasonDropdown()),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
               Expanded(child: _buildColorDropdown()),
             ],
           ),
@@ -63,13 +62,13 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: DropdownButtonFormField<ClothingType?>(
         decoration: const InputDecoration(
           labelText: 'Type',
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           labelStyle: TextStyle(fontSize: 12),
         ),
         initialValue: widget.selectedTypes.isEmpty ? null : widget.selectedTypes.first,
@@ -108,30 +107,47 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
   }
 
   Widget _buildSeasonDropdown() {
-    final settings = ref.watch(settingsProvider);
-    // Show current season from settings when no explicit filter is set
-    final displayedSeason = widget.selectedSeason ?? settings.currentSeason;
-
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: DropdownButtonFormField<Season?>(
         decoration: const InputDecoration(
           labelText: 'Season',
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           labelStyle: TextStyle(fontSize: 12),
         ),
-        value: displayedSeason,
+        initialValue: widget.selectedSeason,
         isExpanded: true,
         items: [
-          const DropdownMenuItem<Season?>(
-            value: null,
-            child: Text('All', style: TextStyle(fontSize: 12)),
-          ),
-          ...Season.values.map((season) => DropdownMenuItem<Season?>(
+          // All Season first
+          ...Season.values.where((s) => s == Season.allSeason).map((season) => DropdownMenuItem<Season?>(
+            value: season,
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _getSeasonColor(season),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    _getSeasonLabel(season),
+                    style: const TextStyle(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          )),
+          // Then the other seasons
+          ...Season.values.where((s) => s != Season.allSeason).map((season) => DropdownMenuItem<Season?>(
             value: season,
             child: Row(
               children: [
@@ -171,7 +187,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
           return Container(
             decoration: BoxDecoration(
               border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -250,16 +266,16 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
         return Container(
           decoration: BoxDecoration(
             border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: DropdownButtonFormField<String?>(
             decoration: const InputDecoration(
               labelText: 'Color',
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               labelStyle: TextStyle(fontSize: 12),
             ),
-            value: currentValue,
+            initialValue: currentValue,
             isExpanded: true,
             items: dropdownItems,
             onChanged: (String? value) {
@@ -275,7 +291,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
       loading: () => Container(
         decoration: BoxDecoration(
           border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -288,7 +304,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
       error: (_, __) => Container(
         decoration: BoxDecoration(
           border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -366,7 +382,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
     switch (season) {
       case Season.spring: return 'Spring';
       case Season.summer: return 'Summer';
-      case Season.autumn: return 'Fall';
+      case Season.autumn: return 'Autumn';
       case Season.winter: return 'Winter';
       case Season.allSeason: return 'All Season';
     }
@@ -393,7 +409,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
           return Container(
             decoration: BoxDecoration(
               border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -408,16 +424,16 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
         return Container(
           decoration: BoxDecoration(
             border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: DropdownButtonFormField<String?>(
             decoration: const InputDecoration(
               labelText: 'Style',
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               labelStyle: TextStyle(fontSize: 12),
             ),
-            value: currentValue,
+            initialValue: currentValue,
             isExpanded: true,
             items: [
               const DropdownMenuItem<String?>(
@@ -458,7 +474,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
       loading: () => Container(
         decoration: BoxDecoration(
           border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -471,7 +487,7 @@ class _MinimalistFiltersState extends ConsumerState<MinimalistFilters> {
       error: (_, __) => Container(
         decoration: BoxDecoration(
           border: Border.all(color: AppTheme.mediumGray.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),

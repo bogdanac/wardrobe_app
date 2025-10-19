@@ -11,6 +11,7 @@ class OutfitCard extends ConsumerWidget {
   final VoidCallback? onTap;
   final VoidCallback? onFavorite;
   final VoidCallback? onWear;
+  final VoidCallback? onVariantsTap; // Callback when variant badge is tapped
   final bool isSelected;
 
   const OutfitCard({
@@ -19,6 +20,7 @@ class OutfitCard extends ConsumerWidget {
     this.onTap,
     this.onFavorite,
     this.onWear,
+    this.onVariantsTap,
     this.isSelected = false,
   });
 
@@ -39,21 +41,67 @@ class OutfitCard extends ConsumerWidget {
           children: [
             AspectRatio(
               aspectRatio: 1,
-              child: Container(
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12),
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      color: AppTheme.lightGray,
+                    ),
+                    child: outfit.imagePreviewPath != null
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                            child: _buildOutfitImage(outfit.imagePreviewPath!, ref),
+                          )
+                        : _buildPlaceholder(ref),
                   ),
-                  color: AppTheme.lightGray,
-                ),
-                child: outfit.imagePreviewPath != null
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
+                  // Variant badge in top-right corner
+                  if (outfit.variantCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: onVariantsTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.pastelPink,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.content_copy,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${outfit.variantCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: _buildOutfitImage(outfit.imagePreviewPath!, ref),
-                      )
-                    : _buildPlaceholder(ref),
+                      ),
+                    ),
+                ],
               ),
             ),
             Padding(

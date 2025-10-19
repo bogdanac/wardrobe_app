@@ -20,7 +20,7 @@ class FirebaseColorPaletteRepository implements ColorPaletteRepository {
     return {
       'id': palette.id,
       'name': palette.name,
-      'colors': palette.colors.map((c) => c.value.toRadixString(16).padLeft(8, '0')).toList(),
+      'colors': palette.colors.map((c) => c.toARGB32().toRadixString(16).padLeft(8, '0')).toList(),
       'imagePath': palette.imagePath,
       'createdAt': palette.createdAt.toIso8601String(),
       'updatedAt': palette.updatedAt.toIso8601String(),

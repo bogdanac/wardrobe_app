@@ -10,7 +10,7 @@ import '../providers/outfit_provider.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/color_palette_provider.dart';
 import '../widgets/outfit_card.dart';
-import '../widgets/unified_filters.dart';
+import '../widgets/maximalist_clothing_item_filters.dart';
 import 'create_outfit_screen.dart';
 
 class GeneratorScreen extends ConsumerStatefulWidget {
@@ -65,6 +65,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Generate Outfit'),
+        toolbarHeight: 56,
         actions: [
           IconButton(
             onPressed: _clearFilters,
@@ -168,7 +169,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
           const SizedBox(height: 16),
           if (_useMLRecommendations) _buildMLControls(),
           if (_useMLRecommendations) const SizedBox(height: 16),
-          UnifiedFilters(
+          MaximalistClothingItemFilters(
             showCategories: true,
             showSeasons: true,
             showWeather: true,
@@ -217,7 +218,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.auto_awesome,
               size: 64,
               color: AppTheme.mediumGray,
@@ -358,7 +359,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
               child: Column(
                 children: [
                   DropdownButtonFormField<String?>(
-                    value: _selectedColorPaletteId,
+                    initialValue: _selectedColorPaletteId,
                     decoration: const InputDecoration(
                       labelText: 'Select a color palette',
                       border: OutlineInputBorder(),
@@ -524,7 +525,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
                     }
                   });
                 },
-                activeColor: AppTheme.pastelPink,
+                activeThumbColor: AppTheme.pastelPink,
               ),
             ],
           ),
@@ -533,12 +534,12 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
             TextField(
               controller: _textPromptController,
               maxLines: 4,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'e.g., "I need a romantic outfit for a dinner date in winter" or "Something professional but stylish for a presentation"',
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(16),
+                contentPadding: EdgeInsets.all(16),
               ),
               style: const TextStyle(fontSize: 14),
             ),
@@ -760,7 +761,7 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
             );
             // Convert Color objects to hex strings
             paletteColors = palette.colors
-                .map((c) => '#${c.value.toRadixString(16).padLeft(8, '0').substring(2)}')
+                .map((c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}')
                 .toList();
           },
           loading: () {},
@@ -851,24 +852,28 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
     try {
       final repository = ref.read(outfitRepositoryProvider);
       await repository.saveOutfit(outfit.copyWith(isFavorite: true));
-      
+
       ref.invalidate(allOutfitsProvider);
       ref.invalidate(filteredOutfitsProvider);
       ref.invalidate(favoriteOutfitsProvider);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Outfit saved to favorites! ❤️'),
-          backgroundColor: AppTheme.pastelPink,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Outfit saved to favorites! ❤️'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save outfit: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save outfit: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -876,28 +881,32 @@ class _GeneratorScreenState extends ConsumerState<GeneratorScreen> {
     try {
       final outfits = ref.read(generatedOutfitsProvider);
       final repository = ref.read(outfitRepositoryProvider);
-      
+
       for (final outfit in outfits) {
         await repository.saveOutfit(outfit);
       }
-      
+
       ref.invalidate(allOutfitsProvider);
       ref.invalidate(filteredOutfitsProvider);
       ref.read(generatedOutfitsProvider.notifier).clearGenerated();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${outfits.length} outfits saved successfully! 🎉'),
-          backgroundColor: AppTheme.pastelPink,
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${outfits.length} outfits saved successfully! 🎉'),
+            backgroundColor: AppTheme.pastelPink,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save outfits: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save outfits: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

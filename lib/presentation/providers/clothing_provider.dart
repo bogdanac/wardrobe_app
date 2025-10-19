@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/clothing_item.dart';
 import '../../domain/repositories/clothing_repository.dart';
 import '../../data/repositories/firebase_clothing_repository.dart';
+import '../../core/services/firebase_image_service.dart';
 import 'auth_provider.dart';
 import 'settings_provider.dart';
 
@@ -13,18 +14,25 @@ final clothingRepositoryProvider = Provider<ClothingRepository>((ref) {
   return FirebaseClothingRepository(userId: userId);
 });
 
+final firebaseImageServiceProvider = Provider<FirebaseImageService>((ref) {
+  // Get the current user ID from auth provider
+  final userId = ref.watch(currentUserIdProvider);
+
+  return FirebaseImageService(userId: userId);
+});
+
 final allClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) async {
-  final repository = ref.read(clothingRepositoryProvider);
+  final repository = ref.watch(clothingRepositoryProvider);
   return repository.getAllClothingItems();
 });
 
 final clothingItemByIdProvider = FutureProvider.family<ClothingItem?, String>((ref, id) async {
-  final repository = ref.read(clothingRepositoryProvider);
+  final repository = ref.watch(clothingRepositoryProvider);
   return repository.getClothingItemById(id);
 });
 
 final clothingItemsByTypeProvider = FutureProvider.family<List<ClothingItem>, ClothingType>((ref, type) async {
-  final repository = ref.read(clothingRepositoryProvider);
+  final repository = ref.watch(clothingRepositoryProvider);
   return repository.getClothingItemsByType(type);
 });
 
@@ -117,7 +125,7 @@ final clothingFilterProvider = StateNotifierProvider<ClothingFilterNotifier, Clo
 });
 
 final filteredClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) async {
-  final repository = ref.read(clothingRepositoryProvider);
+  final repository = ref.watch(clothingRepositoryProvider);
   final filter = ref.watch(clothingFilterProvider);
   final settings = ref.watch(settingsProvider);
 

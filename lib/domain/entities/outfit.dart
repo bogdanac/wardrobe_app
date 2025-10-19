@@ -19,6 +19,8 @@ class Outfit extends Equatable {
   final String? imagePreviewPath;
   final bool isArchived;
   final DateTime? dateArchived;
+  final String? parentOutfitId; // Links to base outfit if this is a variant
+  final int variantCount; // Number of variants for this base outfit
 
   const Outfit({
     required this.id,
@@ -26,7 +28,7 @@ class Outfit extends Equatable {
     this.clothingItemIds = const [],
     this.categories = const [], // Deprecated: use outfitStyles instead
     this.outfitStyles = const [],
-    this.seasons = const [],
+    this.seasons = const [Season.allSeason],
     this.weatherRanges = const [],
     this.wearCount = 0,
     this.lastWornDate,
@@ -38,6 +40,8 @@ class Outfit extends Equatable {
     this.imagePreviewPath,
     this.isArchived = false,
     this.dateArchived,
+    this.parentOutfitId,
+    this.variantCount = 0,
   });
 
   Outfit copyWith({
@@ -58,6 +62,8 @@ class Outfit extends Equatable {
     String? imagePreviewPath,
     bool? isArchived,
     DateTime? dateArchived,
+    String? parentOutfitId,
+    int? variantCount,
   }) {
     return Outfit(
       id: id ?? this.id,
@@ -77,6 +83,8 @@ class Outfit extends Equatable {
       imagePreviewPath: imagePreviewPath ?? this.imagePreviewPath,
       isArchived: isArchived ?? this.isArchived,
       dateArchived: dateArchived ?? this.dateArchived,
+      parentOutfitId: parentOutfitId ?? this.parentOutfitId,
+      variantCount: variantCount ?? this.variantCount,
     );
   }
 
@@ -99,5 +107,7 @@ class Outfit extends Equatable {
         imagePreviewPath,
         isArchived,
         dateArchived,
+        parentOutfitId,
+        variantCount,
       ];
 }

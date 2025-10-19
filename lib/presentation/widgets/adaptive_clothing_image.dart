@@ -82,34 +82,30 @@ class AdaptiveClothingImage extends StatelessWidget {
     if (type == null) return 200;
 
     switch (type!) {
+      case ClothingType.top:
+        return 160;
+      case ClothingType.bottom:
+        return 200;
       case ClothingType.dress:
+        return 280;
       case ClothingType.outerwear:
-        return 240; // Taller for long items
+        return 240;
       case ClothingType.accessory:
-        return 150; // Shorter for small items
+        return 160;
       case ClothingType.shoes:
+        return 100;
       case ClothingType.bag:
-        return 160; // Medium for accessories
-      default:
-        return 180; // Standard for tops, bottoms, etc.
+        return 100;
+      case ClothingType.activewear:
+        return 160;
+      case ClothingType.swimwear:
+        return 100;
     }
   }
 
   EdgeInsets _getPaddingForType() {
-    if (type == null) return const EdgeInsets.all(4);
-
-    switch (type!) {
-      case ClothingType.top:
-        return const EdgeInsets.fromLTRB(4, 4, 4, 0); // Less bottom padding for tops
-      case ClothingType.shoes:
-        return const EdgeInsets.fromLTRB(4, 0, 4, 4); // Less top padding for shoes
-      case ClothingType.accessory:
-        return const EdgeInsets.fromLTRB(8, 2, 8, 8); // Less top padding for accessories
-      case ClothingType.dress:
-        return const EdgeInsets.symmetric(horizontal: 4, vertical: 2); // Less vertical padding for long items
-      default:
-        return const EdgeInsets.all(4);
-    }
+    // No padding needed since cropped images have padding built-in
+    return EdgeInsets.zero;
   }
 
   BoxFit _getFitForType() {

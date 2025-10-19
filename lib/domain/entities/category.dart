@@ -61,7 +61,7 @@ class Category extends Equatable {
     return {
       'id': id,
       'name': name,
-      'color': color.value,
+      'color': color.toARGB32(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'description': description,

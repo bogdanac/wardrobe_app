@@ -301,24 +301,25 @@ class _ManageColorsScreenState extends ConsumerState<ManageColorsScreen> {
   void _showResetDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Reset to Defaults'),
         content: const Text(
           'This will restore the default color palette and remove any custom colors you\'ve added. This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
               final repository = ref.read(customColorRepositoryProvider);
               await repository.resetToDefaults();
               ref.invalidate(allCustomColorsProvider);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Colors reset to defaults')),
                 );
               }
@@ -331,7 +332,7 @@ class _ManageColorsScreenState extends ConsumerState<ManageColorsScreen> {
   }
 
   String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+    return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
   }
 
   Future<void> _reorderColorsInSection(List<CustomColor> colors, int oldIndex, int newIndex, ColorSection section) async {
@@ -406,7 +407,7 @@ class _ManageColorsScreenState extends ConsumerState<ManageColorsScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ColorSection>(
-                  value: selectedSection,
+                  initialValue: selectedSection,
                   decoration: const InputDecoration(
                     labelText: 'Section',
                     border: OutlineInputBorder(),

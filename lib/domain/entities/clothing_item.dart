@@ -73,7 +73,7 @@ class ClothingItem extends Equatable {
     this.additionalImages = const [],
     this.colors = const [],
     this.categories = const [],
-    this.seasons = const [],
+    this.seasons = const [Season.allSeason],
     this.weatherRanges = const [],
     this.wearCount = 0,
     this.lastWornDate,

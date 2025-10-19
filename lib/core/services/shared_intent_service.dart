@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/screens/simple_bulk_add_screen.dart';
 
@@ -10,10 +11,18 @@ class SharedIntentService {
   SharedIntentService._internal();
 
   void initializeSharedIntentListeners(BuildContext context) {
+    // Only initialize on mobile platforms (not web)
+    if (kIsWeb) {
+      debugPrint('Shared intent not supported on web, skipping initialization');
+      return;
+    }
+
     // Listen for shared images when app is in memory
     ReceiveSharingIntent.instance.getMediaStream().listen(
       (List<SharedMediaFile> files) {
-        _handleSharedMedia(context, files);
+        if (context.mounted) {
+          _handleSharedMedia(context, files);
+        }
       },
       onError: (err) {
         debugPrint('Error receiving shared media: $err');
@@ -26,7 +35,9 @@ class SharedIntentService {
         if (files.isNotEmpty) {
           // Wait for the app to finish initializing before navigating
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _handleSharedMedia(context, files);
+            if (context.mounted) {
+              _handleSharedMedia(context, files);
+            }
           });
         }
       },
@@ -59,8 +70,10 @@ class SharedIntentService {
   }
 
   void dispose() {
-    // Clean up any listeners if needed
-    ReceiveSharingIntent.instance.reset();
+    // Clean up any listeners if needed (only on mobile)
+    if (!kIsWeb) {
+      ReceiveSharingIntent.instance.reset();
+    }
   }
 }
 

@@ -10,14 +10,21 @@ import '../providers/clothing_provider.dart';
 import '../providers/outfit_style_provider.dart';
 import '../widgets/clothing_item_card.dart';
 import '../../core/services/smart_defaults_service.dart';
-import '../widgets/minimalist_filters.dart';
+import '../widgets/minimalist_clothing_item_filters.dart';
 import '../widgets/cached_image_widget.dart';
+import '../widgets/maximalist_outfit_filters.dart';
 
 class CreateOutfitScreen extends ConsumerStatefulWidget {
   final Outfit? outfit;
   final List<String>? initialSelectedItemIds;
+  final bool isCreatingVariant; // True if creating a variant of an existing outfit
 
-  const CreateOutfitScreen({super.key, this.outfit, this.initialSelectedItemIds});
+  const CreateOutfitScreen({
+    super.key,
+    this.outfit,
+    this.initialSelectedItemIds,
+    this.isCreatingVariant = false,
+  });
 
   @override
   ConsumerState<CreateOutfitScreen> createState() => _CreateOutfitScreenState();
@@ -91,13 +98,49 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(widget.outfit == null ? 'Create Outfit' : 'Edit Outfit'),
+        title: Text(
+          widget.isCreatingVariant
+              ? 'Create Variant'
+              : (widget.outfit == null ? 'Create Outfit' : 'Edit Outfit')
+        ),
         actions: [
-          if (widget.outfit != null)
+          if (widget.outfit != null && !widget.isCreatingVariant)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'create_variant') {
+                  _createVariant();
+                } else if (value == 'delete') {
+                  _deleteOutfit();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'create_variant',
+                  child: Row(
+                    children: [
+                      Icon(Icons.content_copy, size: 20),
+                      SizedBox(width: 8),
+                      Text('Create Variant'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text('Delete', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          if (widget.outfit != null && widget.isCreatingVariant)
             IconButton(
-              onPressed: _deleteOutfit,
-              icon: const Icon(Icons.delete_outline),
-              color: Colors.red,
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close),
             ),
           TextButton(
             onPressed: _saveOutfit,
@@ -272,7 +315,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         // Filters
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: MinimalistFilters(
+          child: MinimalistClothingItemFilters(
             selectedTypes: _filterTypes,
             selectedSeason: _filterSeason,
             selectedColors: _filterColors,
@@ -398,6 +441,27 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
         children: [
+          _buildCategorySelector(),
+          const SizedBox(height: 24),
+          MaximalistOutfitFilters(
+            selectedSeason: _selectedSeason,
+            selectedWeatherRanges: _selectedWeatherRanges,
+            onSeasonChanged: (season) {
+              setState(() {
+                _selectedSeason = season;
+              });
+            },
+            onWeatherRangesChanged: (ranges) {
+              setState(() {
+                _selectedWeatherRanges = ranges;
+              });
+            },
+            suggestedSeason: _suggestedSeason,
+            isDarkMode: true,
+          ),
+          const SizedBox(height: 24),
+          _buildFavoriteToggle(),
+          const SizedBox(height: 24),
           TextFormField(
             controller: _nameController,
             style: const TextStyle(color: Colors.white),
@@ -415,14 +479,6 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
-          const SizedBox(height: 24),
-          _buildCategorySelector(),
-          const SizedBox(height: 24),
-          _buildSeasonSelector(),
-          const SizedBox(height: 24),
-          _buildWeatherRangeSelector(),
-          const SizedBox(height: 24),
-          _buildFavoriteToggle(),
           const SizedBox(height: 24),
           TextFormField(
             controller: _notesController,
@@ -495,7 +551,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                 ],
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             // Suggested styles section
             if (_suggestedOutfitStyles.isNotEmpty) ...[
               Container(
@@ -522,7 +578,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
-                      runSpacing: 6,
+                      runSpacing: 4,
                       children: _suggestedOutfitStyles.map((styleName) {
                         final isSelected = _selectedOutfitStyles.contains(styleName);
                         return GestureDetector(
@@ -581,8 +637,8 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
               )
             else
               Wrap(
-                spacing: 12,
-                runSpacing: 0,
+                spacing: 8,
+                runSpacing: 4,
                 children: outfitStyles.map((style) {
                   final isSelected = _selectedOutfitStyles.contains(style.name);
                   final isSuggested = _suggestedOutfitStyles.contains(style.name);
@@ -597,22 +653,22 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                             if (isSuggested) ...[
                               const Icon(
                                 Icons.star,
-                                size: 12,
+                                size: 10,
                                 color: Colors.white,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                             ],
                             Icon(
                               style.icon ?? Icons.style,
-                              size: 14,
+                              size: 12,
                               color: Colors.white,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 3),
                             Text(
                               style.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
                             ),
                           ],
                         ),
@@ -652,7 +708,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
                               preferBelow: false,
                               child: Icon(
                                 Icons.info_outline,
-                                size: 16,
+                                size: 14,
                                 color: Colors.grey.shade400,
                               ),
                             ),
@@ -667,144 +723,6 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Text('Error loading outfit styles: $error'),
-    );
-  }
-
-  Widget _buildSeasonSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Season',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            if (_suggestedSeason != null) ...[
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.auto_awesome,
-                size: 16,
-                color: AppTheme.pastelPink,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Suggested: ${_getSeasonLabel(_suggestedSeason!)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.pastelPink,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            ChoiceChip(
-              label: const Text('All'),
-              selected: _selectedSeason == null,
-              selectedColor: AppTheme.darkerPink,
-              backgroundColor: AppTheme.darkerPink.withValues(alpha: 0.9),
-              side: BorderSide.none,
-              labelStyle: const TextStyle(
-                color: Colors.white,
-              ),
-              onSelected: (selected) {
-                setState(() {
-                  _selectedSeason = null;
-                });
-              },
-            ),
-            ...Season.values.map((season) {
-              final isSelected = _selectedSeason == season;
-              final isSuggested = _suggestedSeason == season;
-              return ChoiceChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSuggested) ...[
-                      const Icon(
-                        Icons.star,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      _getSeasonLabel(season),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-                selected: isSelected,
-                selectedColor: _getSeasonColor(season),
-                backgroundColor: _getSeasonColor(season).withValues(alpha: 0.9),
-                side: BorderSide.none,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedSeason = selected ? season : null;
-                  });
-                },
-              );
-            }),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWeatherRangeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Weather',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: WeatherRange.values.map((range) {
-            final isSelected = _selectedWeatherRanges.contains(range);
-            return FilterChip(
-              label: Text(
-                _getWeatherRangeLabel(range),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white),
-              ),
-              selected: isSelected,
-              selectedColor: _getWeatherColor(range),
-              backgroundColor: _getWeatherColor(range).withValues(alpha: 0.9),
-              side: BorderSide.none,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedWeatherRanges.add(range);
-                  } else {
-                    _selectedWeatherRanges.remove(range);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 
@@ -845,7 +763,7 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Container(
           height: 200,
           width: double.infinity,
@@ -1026,8 +944,18 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         }
       }
 
+      // Determine parentOutfitId based on whether this is a variant
+      String? parentOutfitId;
+      if (widget.isCreatingVariant && widget.outfit != null) {
+        // If creating a variant, the parent is either the outfit's parent or the outfit itself
+        parentOutfitId = widget.outfit!.parentOutfitId ?? widget.outfit!.id;
+      } else if (widget.outfit != null && !widget.isCreatingVariant) {
+        // If editing, keep existing parentOutfitId
+        parentOutfitId = widget.outfit!.parentOutfitId;
+      }
+
       final outfit = Outfit(
-        id: widget.outfit?.id ?? _uuid.v4(),
+        id: (widget.outfit != null && !widget.isCreatingVariant) ? widget.outfit!.id : _uuid.v4(),
         name: outfitName,
         clothingItemIds: _selectedItemIds,
         categories: widget.outfit?.categories ?? [], // Keep old categories for backward compatibility
@@ -1036,15 +964,23 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         weatherRanges: _selectedWeatherRanges,
         wearCount: widget.outfit?.wearCount ?? 0,
         lastWornDate: widget.outfit?.lastWornDate,
-        createdAt: widget.outfit?.createdAt ?? DateTime.now(),
+        createdAt: (widget.outfit != null && !widget.isCreatingVariant) ? widget.outfit!.createdAt : DateTime.now(),
         updatedAt: DateTime.now(),
         notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
         isFavorite: _isFavorite,
+        parentOutfitId: parentOutfitId,
+        variantCount: widget.outfit?.variantCount ?? 0,
       );
 
       final repository = ref.read(outfitRepositoryProvider);
-      if (widget.outfit == null) {
+      if (widget.outfit == null || widget.isCreatingVariant) {
         await repository.saveOutfit(outfit);
+
+        // If creating a variant, update parent's variant count
+        if (widget.isCreatingVariant && parentOutfitId != null) {
+          final variants = await repository.getOutfitVariants(parentOutfitId);
+          await repository.updateVariantCount(parentOutfitId, variants.length);
+        }
       } else {
         await repository.updateOutfit(outfit);
       }
@@ -1052,13 +988,25 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
       ref.invalidate(allOutfitsProvider);
       ref.invalidate(filteredOutfitsProvider);
       ref.invalidate(favoriteOutfitsProvider);
+      if (parentOutfitId != null) {
+        ref.invalidate(outfitVariantsProvider(parentOutfitId));
+      }
 
       if (mounted) {
         Navigator.pop(context);
+        String message;
+        if (widget.isCreatingVariant) {
+          message = 'Variant created successfully!';
+        } else if (widget.outfit == null) {
+          message = 'Outfit created successfully!';
+        } else {
+          message = 'Outfit updated successfully!';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.outfit == null ? 'Outfit created successfully!' : 'Outfit updated successfully!',
+              message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1067,17 +1015,33 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to save outfit: $e',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to save outfit: $e',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            backgroundColor: Colors.red,
           ),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      }
     }
+  }
+
+  void _createVariant() {
+    if (widget.outfit == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateOutfitScreen(
+          outfit: widget.outfit,
+          isCreatingVariant: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteOutfit() async {
@@ -1123,59 +1087,20 @@ class _CreateOutfitScreenState extends ConsumerState<CreateOutfitScreen>
           );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to delete outfit: $e',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to delete outfit: $e',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
+          );
+        }
       }
     }
   }
 
-  String _getSeasonLabel(Season season) {
-    switch (season) {
-      case Season.spring: return 'Spring';
-      case Season.summer: return 'Summer';
-      case Season.autumn: return 'Autumn';
-      case Season.winter: return 'Winter';
-      case Season.allSeason: return 'All Season';
-    }
-  }
-
-  String _getWeatherRangeLabel(WeatherRange range) {
-    switch (range) {
-      case WeatherRange.veryHot: return '28°C+';
-      case WeatherRange.hot: return '22°C+';
-      case WeatherRange.warm: return '14°C+';
-      case WeatherRange.cool: return '4°C+';
-      case WeatherRange.cold: return '-4°C+';
-      case WeatherRange.veryCold: return '-15°C+';
-    }
-  }
-
-  Color _getSeasonColor(Season season) {
-    switch (season) {
-      case Season.spring: return const Color(0xFF66BB6A);
-      case Season.summer: return const Color(0xFFFFB74D);
-      case Season.autumn: return const Color(0xFFFF7043);
-      case Season.winter: return const Color(0xFF42A5F5);
-      case Season.allSeason: return AppTheme.mediumGray;
-    }
-  }
-
-  Color _getWeatherColor(WeatherRange range) {
-    switch (range) {
-      case WeatherRange.veryHot: return const Color(0xFFFF5722);
-      case WeatherRange.hot: return const Color(0xFFFF9800);
-      case WeatherRange.warm: return const Color(0xFFFFC107);
-      case WeatherRange.cool: return const Color(0xFF4CAF50);
-      case WeatherRange.cold: return const Color(0xFF2196F3);
-      case WeatherRange.veryCold: return const Color(0xFF3F51B5);
-    }
-  }
 }

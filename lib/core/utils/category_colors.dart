@@ -55,7 +55,7 @@ class CategoryColors {
 
     final prefs = await SharedPreferences.getInstance();
     final colorMap = _customColors!.entries
-        .map((e) => '${e.key}:${e.value.value}')
+        .map((e) => '${e.key}:${e.value.toARGB32()}')
         .toList();
     await prefs.setStringList(_customColorsKey, colorMap);
   }

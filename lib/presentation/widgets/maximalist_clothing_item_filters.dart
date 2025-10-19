@@ -4,7 +4,7 @@ import '../../domain/entities/clothing_item.dart';
 import '../../core/constants/category_constants.dart';
 import '../providers/category_provider.dart';
 
-class UnifiedFilters extends ConsumerStatefulWidget {
+class MaximalistClothingItemFilters extends ConsumerStatefulWidget {
   final bool showCategories;
   final bool showSeasons;
   final bool showWeather;
@@ -27,7 +27,7 @@ class UnifiedFilters extends ConsumerStatefulWidget {
   final Function(bool?) onFavoritesChanged;
   final Function(MetallicElements?) onMetallicElementsChanged;
 
-  const UnifiedFilters({
+  const MaximalistClothingItemFilters({
     super.key,
     this.showCategories = true,
     this.showSeasons = true,
@@ -53,10 +53,10 @@ class UnifiedFilters extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<UnifiedFilters> createState() => _UnifiedFiltersState();
+  ConsumerState<MaximalistClothingItemFilters> createState() => _MaximalistClothingItemFiltersState();
 }
 
-class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
+class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothingItemFilters> {
   List<String> _wardrobeColors = [];
 
   @override
@@ -498,12 +498,12 @@ class _UnifiedFiltersState extends ConsumerState<UnifiedFilters> {
 
   String _getWeatherRangeLabel(WeatherRange range) {
     switch (range) {
-      case WeatherRange.veryHot: return '28°C+';
-      case WeatherRange.hot: return '22°C+';
-      case WeatherRange.warm: return '14°C+';
-      case WeatherRange.cool: return '4°C+';
-      case WeatherRange.cold: return '-4°C+';
-      case WeatherRange.veryCold: return '-15°C+';
+      case WeatherRange.veryHot: return '28°C';
+      case WeatherRange.hot: return '22°C';
+      case WeatherRange.warm: return '14°C';
+      case WeatherRange.cool: return '4°C';
+      case WeatherRange.cold: return '-4°C';
+      case WeatherRange.veryCold: return '-15°C';
     }
   }
 

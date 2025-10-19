@@ -19,11 +19,8 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Enable Firestore offline persistence
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+    // Note: Firestore offline persistence settings are handled differently on web
+    // Web persistence is enabled by default and doesn't need explicit configuration
   } catch (e) {
     // Firebase already initialized, ignore
     if (!e.toString().contains('duplicate-app')) {
@@ -80,16 +77,20 @@ class AuthGate extends ConsumerWidget {
         // If user is not signed in, show login screen
         return const LoginScreen();
       },
-      loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      error: (error, stack) => Scaffold(
-        body: Center(
-          child: Text('Error: $error'),
-        ),
-      ),
+      loading: () {
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+      error: (error, stack) {
+        return Scaffold(
+          body: Center(
+            child: Text('Error: $error'),
+          ),
+        );
+      },
     );
   }
 }

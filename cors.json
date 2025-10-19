@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://wardrobe-app.web.app", "https://wardrobe-app-19e7e.firebaseapp.com", "http://localhost:*"],
+    "method": ["GET", "HEAD"],
+    "maxAgeSeconds": 3600
+  }
+]

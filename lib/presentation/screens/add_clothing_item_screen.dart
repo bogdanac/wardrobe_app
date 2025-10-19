@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:image/image.dart' as img;
+import 'package:http/http.dart' as http;
 import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/services/image_service.dart';
@@ -10,7 +13,7 @@ import '../../core/errors/error_handler.dart';
 import '../../core/utils/loading_state.dart';
 import '../providers/clothing_provider.dart';
 import '../providers/custom_color_provider.dart';
-import '../widgets/unified_filters.dart';
+import '../widgets/maximalist_clothing_item_filters.dart';
 import '../widgets/adaptive_clothing_image.dart';
 import 'archive_confirmation_screen.dart';
 import 'delete_confirmation_screen.dart';
@@ -44,6 +47,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   final List<Color?> _selectedColors = [null, null, null]; // [primary, secondary, accent]
   List<File> _selectedImages = [];
   File? _originalImage; // Keep original image for re-processing
+  File? _beforeCropImage; // Keep image before cropping for undo
   final List<File> _additionalImages = []; // Additional images without background removal
   List<Map<String, dynamic>> _processedImages = []; // {file: File, colors: List<Color>}
   MetallicElements _selectedMetallicElements = MetallicElements.none;
@@ -135,6 +139,12 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   case 'remove_bg':
                     _reprocessBackgroundRemoval();
                     break;
+                  case 'crop_transparent':
+                    _cropTransparentSpace();
+                    break;
+                  case 'undo_crop':
+                    _undoCrop();
+                    break;
                   case 'replace_image':
                     _showImagePickerOptions();
                     break;
@@ -170,6 +180,27 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                     ],
                   ),
                 ),
+                const PopupMenuItem(
+                  value: 'crop_transparent',
+                  child: Row(
+                    children: [
+                      Icon(Icons.crop, color: AppTheme.pastelPink),
+                      SizedBox(width: 12),
+                      Text('Crop Transparent Space'),
+                    ],
+                  ),
+                ),
+                if (_beforeCropImage != null)
+                  const PopupMenuItem(
+                    value: 'undo_crop',
+                    child: Row(
+                      children: [
+                        Icon(Icons.undo, color: Colors.orange),
+                        SizedBox(width: 12),
+                        Text('Undo Crop'),
+                      ],
+                    ),
+                  ),
                 const PopupMenuItem(
                   value: 'add_images',
                   child: Row(
@@ -226,7 +257,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             const SizedBox(height: 24),
             _buildClothingTypeSection(),
             const SizedBox(height: 24),
-            UnifiedFilters(
+            MaximalistClothingItemFilters(
               showCategories: false,
               showSeasons: true,
               showWeather: true,
@@ -276,7 +307,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             const SizedBox(height: 24),
             _buildMetallicElementsSection(),
             const SizedBox(height: 24),
-            UnifiedFilters(
+            MaximalistClothingItemFilters(
               showCategories: true,
               showSeasons: false,
               showWeather: false,
@@ -865,6 +896,179 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
     }
   }
 
+  Future<void> _cropTransparentSpace() async {
+    if (_selectedImages.isEmpty && widget.item?.imagePath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No image to crop')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _loadingState = const LoadingState(
+        type: LoadingType.processing,
+        message: 'Cropping transparent space...',
+      );
+    });
+
+    try {
+      File imageToProcess;
+      List<int> imageBytes;
+
+      if (_selectedImages.isNotEmpty) {
+        imageToProcess = _selectedImages.first;
+        imageBytes = await imageToProcess.readAsBytes();
+      } else if (widget.item?.imagePath != null) {
+        final imagePath = widget.item!.imagePath!;
+
+        // Check if it's a network URL (Firebase)
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+          // Download the image from Firebase
+          final response = await http.get(Uri.parse(imagePath));
+          if (response.statusCode != 200) {
+            throw Exception('Failed to download image from Firebase');
+          }
+          imageBytes = response.bodyBytes;
+
+          // Save to temp file for undo
+          final tempDir = await Directory.systemTemp.createTemp('original_');
+          imageToProcess = File('${tempDir.path}/original_${DateTime.now().millisecondsSinceEpoch}.png');
+          await imageToProcess.writeAsBytes(imageBytes);
+        } else {
+          // Local file
+          imageToProcess = File(imagePath);
+          imageBytes = await imageToProcess.readAsBytes();
+        }
+      } else {
+        throw Exception('No image available');
+      }
+
+      // Save current image for undo
+      _beforeCropImage = imageToProcess;
+
+      // Decode the image
+      final decodedImage = img.decodeImage(Uint8List.fromList(imageBytes));
+
+      if (decodedImage == null) {
+        throw Exception('Failed to decode image');
+      }
+
+      // Find bounding box of non-transparent pixels
+      int minX = decodedImage.width;
+      int minY = decodedImage.height;
+      int maxX = 0;
+      int maxY = 0;
+      bool hasContent = false;
+
+      for (int y = 0; y < decodedImage.height; y++) {
+        for (int x = 0; x < decodedImage.width; x++) {
+          final pixel = decodedImage.getPixel(x, y);
+          final alpha = pixel.a;
+
+          // If pixel is not fully transparent
+          if (alpha > 10) { // Small threshold to ignore nearly transparent pixels
+            hasContent = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (!hasContent) {
+        throw Exception('Image appears to be completely transparent');
+      }
+
+      // Add small padding (5% of dimensions)
+      final paddingX = ((maxX - minX) * 0.05).round().clamp(5, 20);
+      final paddingY = ((maxY - minY) * 0.05).round().clamp(5, 20);
+
+      minX = (minX - paddingX).clamp(0, decodedImage.width - 1);
+      minY = (minY - paddingY).clamp(0, decodedImage.height - 1);
+      maxX = (maxX + paddingX).clamp(0, decodedImage.width - 1);
+      maxY = (maxY + paddingY).clamp(0, decodedImage.height - 1);
+
+      // Crop the image
+      final croppedImage = img.copyCrop(
+        decodedImage,
+        x: minX,
+        y: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1,
+      );
+
+      // Save the cropped image
+      final tempDir = await Directory.systemTemp.createTemp('crop_');
+      final croppedFile = File('${tempDir.path}/cropped_${DateTime.now().millisecondsSinceEpoch}.png');
+      await croppedFile.writeAsBytes(img.encodePng(croppedImage));
+
+      setState(() {
+        _selectedImages = [croppedFile];
+        if (_processedImages.isNotEmpty) {
+          _processedImages[0]['file'] = croppedFile;
+        }
+        _isProcessing = false;
+        _loadingState = const LoadingState(
+          type: LoadingType.processing,
+          message: 'Transparent space cropped successfully!',
+        );
+      });
+
+      // Hide success message after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _loadingState = LoadingState(
+          type: LoadingType.processing,
+          message: 'Failed to crop: ${e.toString()}',
+        );
+      });
+
+      // Hide error message after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+    }
+  }
+
+  void _undoCrop() {
+    if (_beforeCropImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No crop to undo')),
+      );
+      return;
+    }
+
+    setState(() {
+      _selectedImages = [_beforeCropImage!];
+      if (_processedImages.isNotEmpty) {
+        _processedImages[0]['file'] = _beforeCropImage!;
+      }
+      _beforeCropImage = null; // Clear undo history after using it
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Crop undone'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _pickAdditionalImages() async {
     try {
       final images = await _imageService.pickMultipleImagesFromGallery();
@@ -942,7 +1146,28 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         String? imagePath;
         if (_processedImages.isNotEmpty) {
           final processedFile = _processedImages.first['file'] as File;
-          imagePath = await _imageService.saveImage(processedFile);
+
+          // Check if we're updating an existing item with a Firebase image
+          if (widget.item?.imagePath != null &&
+              (widget.item!.imagePath!.startsWith('http://') ||
+               widget.item!.imagePath!.startsWith('https://'))) {
+            // Upload new cropped image to Firebase and delete old one
+            final firebaseImageService = ref.read(firebaseImageServiceProvider);
+            final oldImageUrl = widget.item!.imagePath!;
+
+            // Upload the new cropped image
+            imagePath = await firebaseImageService.uploadImage(processedFile);
+
+            // Delete the old image from Firebase
+            try {
+              await firebaseImageService.deleteImage(oldImageUrl);
+            } catch (e) {
+              // Ignore deletion errors - the new image is already uploaded
+            }
+          } else {
+            // Local storage
+            imagePath = await _imageService.saveImage(processedFile);
+          }
         } else if (widget.item?.imagePath != null) {
           imagePath = widget.item!.imagePath;
         }
@@ -1017,7 +1242,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   }
 
   String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+    return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
   }
 
   String _getMetallicElementsLabel(MetallicElements elements) {
@@ -1053,7 +1278,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         ),
       ),
     ).then((result) {
-      if (result == true) {
+      if (result == true && mounted) {
         // Item was archived, go back to previous screen
         Navigator.pop(context);
       }
@@ -1071,7 +1296,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         ),
       ),
     ).then((result) {
-      if (result == true) {
+      if (result == true && mounted) {
         // Item was deleted, go back to previous screen
         Navigator.pop(context);
       }
