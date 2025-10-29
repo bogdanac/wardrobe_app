@@ -441,17 +441,32 @@ class MLOutfitRecommender {
     // Temperature considerations
     if (context.temperature != null) {
       final temp = context.temperature!;
-      
-      if (temp < 10) { // Cold
-        if (item.type == ClothingType.outerwear || 
-            item.weatherRanges.contains(WeatherRange.cold) ||
+
+      if (temp < -5) { // Very cold < -5°C
+        if (item.type == ClothingType.outerwear ||
             item.weatherRanges.contains(WeatherRange.veryCold)) {
           score += 0.3;
         }
-      } else if (temp > 25) { // Hot
+      } else if (temp >= -5 && temp <= 2) { // Cold -5°C - 2°C
+        if (item.type == ClothingType.outerwear ||
+            item.weatherRanges.contains(WeatherRange.cold)) {
+          score += 0.3;
+        }
+      } else if (temp >= 3 && temp <= 9) { // Cool 3°C - 9°C
+        if (item.weatherRanges.contains(WeatherRange.cool)) {
+          score += 0.3;
+        }
+      } else if (temp >= 10 && temp <= 17) { // Warm 10°C - 17°C
+        if (item.weatherRanges.contains(WeatherRange.warm)) {
+          score += 0.3;
+        }
+      } else if (temp >= 18 && temp <= 24) { // Hot 18°C - 24°C
+        if (item.weatherRanges.contains(WeatherRange.hot)) {
+          score += 0.3;
+        }
+      } else if (temp > 25) { // Very hot > 25°C
         if (item.type == ClothingType.dress ||
             item.type == ClothingType.swimwear ||
-            item.weatherRanges.contains(WeatherRange.hot) ||
             item.weatherRanges.contains(WeatherRange.veryHot)) {
           score += 0.3;
         }

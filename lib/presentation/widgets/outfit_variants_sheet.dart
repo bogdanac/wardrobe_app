@@ -25,7 +25,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
       expand: false,
       builder: (context, scrollController) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.primaryBlack,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -44,6 +44,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryWhite,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -58,7 +59,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: AppTheme.primaryWhite),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -115,6 +116,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryWhite,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -132,6 +134,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryWhite,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -175,6 +178,7 @@ class OutfitVariantsSheet extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryWhite,
                           ),
                         ),
                         const SizedBox(height: 8),

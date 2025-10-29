@@ -138,7 +138,8 @@ final filteredClothingItemsProvider = FutureProvider<List<ClothingItem>>((ref) a
     items = await repository.searchClothingItems(filter.searchQuery);
 
     // Apply season filter to search results
-    if (effectiveSeason != null) {
+    // If "All Season" is selected, show all items regardless of their season tags
+    if (effectiveSeason != null && effectiveSeason != Season.allSeason) {
       items = items.where((item) =>
         item.seasons.contains(effectiveSeason) || item.seasons.contains(Season.allSeason)
       ).toList();

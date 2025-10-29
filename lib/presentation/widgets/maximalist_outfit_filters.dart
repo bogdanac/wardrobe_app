@@ -3,18 +3,18 @@ import '../../domain/entities/clothing_item.dart';
 import '../../core/themes/app_theme.dart';
 
 class MaximalistOutfitFilters extends StatelessWidget {
-  final Season? selectedSeason;
+  final List<Season> selectedSeasons;
   final List<WeatherRange> selectedWeatherRanges;
-  final Function(Season?) onSeasonChanged;
+  final Function(List<Season>) onSeasonsChanged;
   final Function(List<WeatherRange>) onWeatherRangesChanged;
   final Season? suggestedSeason;
   final bool isDarkMode;
 
   const MaximalistOutfitFilters({
     super.key,
-    required this.selectedSeason,
+    required this.selectedSeasons,
     required this.selectedWeatherRanges,
-    required this.onSeasonChanged,
+    required this.onSeasonsChanged,
     required this.onWeatherRangesChanged,
     this.suggestedSeason,
     this.isDarkMode = false,
@@ -70,74 +70,54 @@ class MaximalistOutfitFilters extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: [
-            // All Season first
-            ...Season.values.where((s) => s == Season.allSeason).map((season) {
-              final isSelected = selectedSeason == season;
-              final isSuggested = suggestedSeason == season;
-              return ChoiceChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSuggested) ...[
-                      const Icon(
-                        Icons.star,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      _getSeasonLabel(season),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white),
+          children: Season.values.map((season) {
+            final isSelected = selectedSeasons.contains(season);
+            final isSuggested = suggestedSeason == season;
+            return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isSuggested) ...[
+                    const Icon(
+                      Icons.star,
+                      size: 12,
+                      color: Colors.white,
                     ),
+                    const SizedBox(width: 4),
                   ],
-                ),
-                selected: isSelected,
-                selectedColor: _getSeasonColor(season),
-                backgroundColor: _getSeasonColor(season).withValues(alpha: 0.9),
-                side: BorderSide.none,
-                onSelected: (selected) {
-                  onSeasonChanged(selected ? season : null);
-                },
-              );
-            }),
-            // Then the other seasons
-            ...Season.values.where((s) => s != Season.allSeason).map((season) {
-              final isSelected = selectedSeason == season;
-              final isSuggested = suggestedSeason == season;
-              return ChoiceChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSuggested) ...[
-                      const Icon(
-                        Icons.star,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      _getSeasonLabel(season),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-                selected: isSelected,
-                selectedColor: _getSeasonColor(season),
-                backgroundColor: _getSeasonColor(season).withValues(alpha: 0.9),
-                side: BorderSide.none,
-                onSelected: (selected) {
-                  onSeasonChanged(selected ? season : null);
-                },
-              );
-            }),
-          ],
+                  Text(
+                    _getSeasonLabel(season),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+              selected: isSelected,
+              selectedColor: _getSeasonColor(season),
+              backgroundColor: _getSeasonColor(season).withValues(alpha: 0.9),
+              side: BorderSide.none,
+              onSelected: (selected) {
+                final newSeasons = List<Season>.from(selectedSeasons);
+                if (selected) {
+                  // If selecting "All Season", clear all other seasons
+                  if (season == Season.allSeason) {
+                    newSeasons.clear();
+                    newSeasons.add(Season.allSeason);
+                  } else {
+                    // If selecting a specific season, remove "All Season" if it exists
+                    newSeasons.remove(Season.allSeason);
+                    newSeasons.add(season);
+                  }
+                } else {
+                  newSeasons.remove(season);
+                }
+                onSeasonsChanged(newSeasons);
+              },
+            );
+          }).toList(),
         ),
       ],
     );
@@ -149,13 +129,17 @@ class MaximalistOutfitFilters extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Weather',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
+        Row(
+          children: [
+            Text(
+              'Weather',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -164,6 +148,8 @@ class MaximalistOutfitFilters extends StatelessWidget {
           children: WeatherRange.values.map((range) {
             final isSelected = selectedWeatherRanges.contains(range);
             return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Text(
                 _getWeatherRangeLabel(range),
                 maxLines: 1,
@@ -223,17 +209,17 @@ class MaximalistOutfitFilters extends StatelessWidget {
   String _getWeatherRangeLabel(WeatherRange range) {
     switch (range) {
       case WeatherRange.veryHot:
-        return '28°C';
+        return 'Hot > 25°C';
       case WeatherRange.hot:
-        return '22°C';
+        return 'Warm 18-24°C';
       case WeatherRange.warm:
-        return '14°C';
+        return 'Chill 10-17°C';
       case WeatherRange.cool:
-        return '4°C';
+        return 'Cool 3-9°C';
       case WeatherRange.cold:
-        return '-4°C';
+        return 'Cold -5-2°C';
       case WeatherRange.veryCold:
-        return '-15°C';
+        return 'Freezing < -5°C';
     }
   }
 

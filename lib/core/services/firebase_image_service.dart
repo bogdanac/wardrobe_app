@@ -4,6 +4,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 
 class FirebaseImageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -131,6 +133,27 @@ class FirebaseImageService {
     if (url == null) return false;
     return url.contains('firebasestorage.googleapis.com') ||
            url.contains('firebasestorage.app');
+  }
+
+  /// Download image from Firebase Storage URL to local file
+  Future<File> downloadImageToLocal(String imageUrl) async {
+    try {
+      // Download image from URL
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to download image: ${response.statusCode}');
+      }
+
+      // Save to temporary directory
+      final tempDir = await getTemporaryDirectory();
+      final fileName = '${_uuid.v4()}.jpg';
+      final localFile = File('${tempDir.path}/$fileName');
+      await localFile.writeAsBytes(response.bodyBytes);
+
+      return localFile;
+    } catch (e) {
+      throw Exception('Failed to download image from Firebase: $e');
+    }
   }
 
   /// Get file size in bytes

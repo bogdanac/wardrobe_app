@@ -361,7 +361,10 @@ class _SimpleBulkAddScreenState extends ConsumerState<SimpleBulkAddScreen> {
         final processedImage = await _imageService.removeBackground(image);
         final customColorRepository = ref.read(customColorRepositoryProvider);
         final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 3);
-        final imagePath = await _imageService.saveImage(processedImage);
+
+        // Upload to Firebase Storage
+        final firebaseImageService = ref.read(firebaseImageServiceProvider);
+        final imagePath = await firebaseImageService.uploadImage(processedImage);
 
         // Create clothing item with smart defaults
         final item = ClothingItem(

@@ -13,7 +13,7 @@ class BackgroundRemovalConfig {
   /// Get user's preferred background removal method
   static Future<BackgroundRemovalMethod> getPreferredMethod() async {
     final prefs = await SharedPreferences.getInstance();
-    final preferAI = prefs.getBool(_preferAiRemovalKey) ?? true; // Default to AI if available
+    final preferAI = prefs.getBool(_preferAiRemovalKey) ?? false; // Default to local (free) method
     return preferAI ? BackgroundRemovalMethod.ai : BackgroundRemovalMethod.local;
   }
   

@@ -51,7 +51,8 @@ class FirebaseCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> updateCategory(Category category) async {
-    await _collection.doc(category.id).update(_toFirestore(category));
+    // Use set to fully replace the document (consistent with saveCategory)
+    await _collection.doc(category.id).set(_toFirestore(category));
   }
 
   @override

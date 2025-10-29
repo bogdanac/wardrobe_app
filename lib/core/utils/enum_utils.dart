@@ -81,17 +81,17 @@ class EnumUtils {
   static String getWeatherRangeLabel(WeatherRange range) {
     switch (range) {
       case WeatherRange.veryHot:
-        return 'Very Hot (> 28°C)';
+        return 'Hot (> 25°C)';
       case WeatherRange.hot:
-        return 'Hot (> 22°C)';
+        return 'Warm (18°C - 24°C)';
       case WeatherRange.warm:
-        return 'Warm (> 14°C)';
+        return 'Chill (10°C - 17°C)';
       case WeatherRange.cool:
-        return 'Cool (> 4°C)';
+        return 'Cool (3°C - 9°C)';
       case WeatherRange.cold:
-        return 'Cold (> -4°C)';
+        return 'Cold (-5°C - 2°C)';
       case WeatherRange.veryCold:
-        return 'Very Cold (> -15°C)';
+        return 'Freezing (< -5°C)';
     }
   }
 

@@ -55,7 +55,8 @@ class FirebaseOutfitStyleRepository implements OutfitStyleRepository {
 
   @override
   Future<void> updateOutfitStyle(OutfitStyle outfitStyle) async {
-    await _collection.doc(outfitStyle.id).update(_toFirestore(outfitStyle));
+    // Use set to fully replace the document (consistent with saveOutfitStyle)
+    await _collection.doc(outfitStyle.id).set(_toFirestore(outfitStyle));
   }
 
   @override

@@ -21,12 +21,12 @@ enum Season {
 }
 
 enum WeatherRange {
-  veryHot, // 28°C+
-  hot,     // 22°C+
-  warm,    // 14°C+
-  cool,    // 4°C+
-  cold,    // -4°C+
-  veryCold // -15°C+
+  veryHot, // Hot > 25°C
+  hot,     // Warm 18°C - 24°C
+  warm,    // Chill 10°C - 17°C
+  cool,    // Cool 3°C - 9°C
+  cold,    // Cold -5°C - 2°C
+  veryCold // Freezing < -5°C
 }
 
 enum MetallicElements {

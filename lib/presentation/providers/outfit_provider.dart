@@ -51,7 +51,7 @@ final outfitVariantsProvider = FutureProvider.family<List<Outfit>, String>((ref,
 
 class OutfitFilterState {
   final List<String> categories;
-  final Season? season;
+  final List<Season> seasons;
   final List<WeatherRange> weatherRanges;
   final bool? isFavorite;
   final String searchQuery;
@@ -59,7 +59,7 @@ class OutfitFilterState {
 
   const OutfitFilterState({
     this.categories = const [],
-    this.season,
+    this.seasons = const [],
     this.weatherRanges = const [],
     this.isFavorite,
     this.searchQuery = '',
@@ -68,7 +68,7 @@ class OutfitFilterState {
 
   OutfitFilterState copyWith({
     List<String>? categories,
-    Season? season,
+    List<Season>? seasons,
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
     String? searchQuery,
@@ -76,7 +76,7 @@ class OutfitFilterState {
   }) {
     return OutfitFilterState(
       categories: categories ?? this.categories,
-      season: season ?? this.season,
+      seasons: seasons ?? this.seasons,
       weatherRanges: weatherRanges ?? this.weatherRanges,
       isFavorite: isFavorite ?? this.isFavorite,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -92,8 +92,8 @@ class OutfitFilterNotifier extends StateNotifier<OutfitFilterState> {
     state = state.copyWith(categories: categories);
   }
 
-  void updateSeason(Season? season) {
-    state = state.copyWith(season: season);
+  void updateSeasons(List<Season> seasons) {
+    state = state.copyWith(seasons: seasons);
   }
 
   void updateWeatherRanges(List<WeatherRange> weatherRanges) {
@@ -132,7 +132,7 @@ final filteredOutfitsProvider = FutureProvider<List<Outfit>>((ref) async {
   } else {
     outfits = await repository.filterOutfits(
       categories: filter.categories.isEmpty ? null : filter.categories,
-      season: filter.season,
+      seasons: filter.seasons.isEmpty ? null : filter.seasons,
       weatherRanges: filter.weatherRanges.isEmpty ? null : filter.weatherRanges,
       isFavorite: filter.isFavorite,
     );

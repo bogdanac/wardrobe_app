@@ -98,7 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   bool _hasActiveFilters() {
     final filter = ref.read(outfitFilterProvider);
     return filter.categories.isNotEmpty ||
-        filter.season != null ||
+        filter.seasons.isNotEmpty ||
         filter.weatherRanges.isNotEmpty ||
         filter.isFavorite != null;
   }
@@ -160,10 +160,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                         _buildCategoryFilter(),
                         const SizedBox(height: 24),
                         MaximalistOutfitFilters(
-                          selectedSeason: filter.season,
+                          selectedSeasons: filter.seasons,
                           selectedWeatherRanges: filter.weatherRanges,
-                      onSeasonChanged: (season) {
-                        ref.read(outfitFilterProvider.notifier).updateSeason(season);
+                      onSeasonsChanged: (seasons) {
+                        ref.read(outfitFilterProvider.notifier).updateSeasons(seasons);
                       },
                       onWeatherRangesChanged: (ranges) {
                         ref.read(outfitFilterProvider.notifier).updateWeatherRanges(ranges);

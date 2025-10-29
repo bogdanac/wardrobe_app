@@ -189,12 +189,15 @@ class FirebaseClothingRepository implements ClothingRepository {
       );
       var items = snapshot.docs.map(_fromFirestore).toList();
 
-      // Client-side season filtering - include items with allSeason
-      if (season != null) {
+      // Client-side season filtering
+      // If "All Season" is selected in filter, show all items regardless of their season tags
+      // Otherwise, show items that match the selected season OR have "All Season" tag
+      if (season != null && season != Season.allSeason) {
         items = items.where((item) =>
           item.seasons.contains(season) || item.seasons.contains(Season.allSeason)
         ).toList();
       }
+      // If season == Season.allSeason, don't filter - show all items
 
       // Client-side filtering for complex queries
       if (categories != null && categories.isNotEmpty) {
@@ -225,7 +228,8 @@ class FirebaseClothingRepository implements ClothingRepository {
 
   @override
   Future<void> updateClothingItem(ClothingItem item) async {
-    await _collection.doc(item.id).update(_toFirestore(item));
+    // Use set to fully replace the document (consistent with saveClothingItem)
+    await _collection.doc(item.id).set(_toFirestore(item));
   }
 
   @override

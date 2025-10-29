@@ -12,7 +12,7 @@ abstract class OutfitRepository {
   Future<List<Outfit>> filterOutfits({
     List<String>? categories,
     List<String>? outfitStyles,
-    Season? season,
+    List<Season>? seasons,
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
   });
@@ -29,4 +29,12 @@ abstract class OutfitRepository {
   // Variant management
   Future<List<Outfit>> getOutfitVariants(String parentOutfitId);
   Future<void> updateVariantCount(String outfitId, int count);
+  Future<void> incrementVariantCount(String outfitId);
+
+  // Optimized method to save a variant and update parent count in one operation
+  // Default implementation falls back to separate operations
+  Future<void> saveOutfitVariant(Outfit variant, String parentOutfitId) async {
+    await saveOutfit(variant);
+    await incrementVariantCount(parentOutfitId);
+  }
 }

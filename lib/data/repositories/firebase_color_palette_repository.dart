@@ -66,7 +66,8 @@ class FirebaseColorPaletteRepository implements ColorPaletteRepository {
 
   @override
   Future<void> updateColorPalette(ColorPalette palette) async {
-    await _collection.doc(palette.id).update(_toFirestore(palette));
+    // Use set to fully replace the document (consistent with saveColorPalette)
+    await _collection.doc(palette.id).set(_toFirestore(palette));
   }
 
   @override

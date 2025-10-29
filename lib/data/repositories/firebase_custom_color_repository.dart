@@ -84,7 +84,8 @@ class FirebaseCustomColorRepository implements CustomColorRepository {
 
   @override
   Future<void> updateColor(CustomColor color) async {
-    await _collection.doc(color.id).update(_toFirestore(color));
+    // Use set to fully replace the document (consistent with saveColor)
+    await _collection.doc(color.id).set(_toFirestore(color));
   }
 
   @override

@@ -129,26 +129,30 @@ class WeatherService {
     String comfortLevel = 'comfortable';
     
     // Temperature-based recommendations
-    if (temperature <= 0) {
+    if (temperature < -5) { // Very cold < -5°C
       recommendedTypes.addAll([ClothingType.outerwear, ClothingType.top, ClothingType.shoes]);
       weatherTags.addAll(['freezing', 'very-cold', 'winter']);
       comfortLevel = 'very cold';
-    } else if (temperature <= 10) {
+    } else if (temperature >= -5 && temperature <= 2) { // Cold -5°C - 2°C
       recommendedTypes.addAll([ClothingType.outerwear, ClothingType.top, ClothingType.bottom]);
-      weatherTags.addAll(['cold', 'cool']);
+      weatherTags.addAll(['cold']);
       comfortLevel = 'cold';
-    } else if (temperature <= 20) {
+    } else if (temperature >= 3 && temperature <= 9) { // Cool 3°C - 9°C
+      recommendedTypes.addAll([ClothingType.outerwear, ClothingType.top, ClothingType.bottom]);
+      weatherTags.addAll(['cool']);
+      comfortLevel = 'cool';
+    } else if (temperature >= 10 && temperature <= 17) { // Warm 10°C - 17°C
       recommendedTypes.addAll([ClothingType.top, ClothingType.bottom, ClothingType.shoes]);
-      weatherTags.addAll(['mild', 'comfortable']);
-      comfortLevel = 'mild';
-    } else if (temperature <= 30) {
-      recommendedTypes.addAll([ClothingType.top, ClothingType.bottom, ClothingType.shoes]);
-      weatherTags.addAll(['warm', 'pleasant']);
+      weatherTags.addAll(['warm', 'comfortable']);
       comfortLevel = 'warm';
-    } else {
+    } else if (temperature >= 18 && temperature <= 24) { // Hot 18°C - 24°C
       recommendedTypes.addAll([ClothingType.top, ClothingType.bottom, ClothingType.shoes]);
-      weatherTags.addAll(['hot', 'very-hot', 'summer']);
+      weatherTags.addAll(['hot', 'pleasant']);
       comfortLevel = 'hot';
+    } else { // Very hot > 25°C
+      recommendedTypes.addAll([ClothingType.top, ClothingType.bottom, ClothingType.shoes]);
+      weatherTags.addAll(['very-hot', 'summer']);
+      comfortLevel = 'very hot';
     }
     
     // Weather condition adjustments
@@ -186,7 +190,7 @@ class WeatherService {
       avoidClothingTypes: avoidTypes,
       weatherTags: weatherTags,
       comfortLevel: comfortLevel,
-      layeringRecommended: temperature < 15 || (temperature > 15 && temperature < 25),
+      layeringRecommended: temperature < 17 || (temperature > 17 && temperature < 25),
       umbrellaNeeded: condition.contains('rain'),
       sunProtectionNeeded: condition.contains('sunny') || condition.contains('clear'),
     );
@@ -233,34 +237,41 @@ class WeatherService {
     final suggestions = <String>[];
     final weather = recommendation.weather;
     final temp = weather.temperature;
-    
-    if (temp <= 0) {
+
+    if (temp < -5) { // Very cold < -5°C
       suggestions.addAll([
         'Layer a warm sweater under a heavy coat',
         'Don\'t forget thermal underwear!',
         'Insulated boots are essential',
         'Add a scarf and warm hat'
       ]);
-    } else if (temp <= 10) {
+    } else if (temp >= -5 && temp <= 2) { // Cold -5°C - 2°C
       suggestions.addAll([
-        'A warm jacket or coat is recommended',
+        'A warm jacket or coat is essential',
+        'Long pants and closed-toe shoes',
+        'Consider layering with a sweater',
+        'Scarf and gloves recommended'
+      ]);
+    } else if (temp >= 3 && temp <= 9) { // Cool 3°C - 9°C
+      suggestions.addAll([
+        'A jacket or coat is recommended',
         'Long pants and closed-toe shoes',
         'Consider layering with a sweater',
         'Light scarf for extra warmth'
       ]);
-    } else if (temp <= 20) {
+    } else if (temp >= 10 && temp <= 17) { // Warm 10°C - 17°C
       suggestions.addAll([
         'Perfect weather for a light jacket or cardigan',
         'Comfortable jeans or long pants',
         'Sneakers or casual shoes work great'
       ]);
-    } else if (temp <= 30) {
+    } else if (temp >= 18 && temp <= 24) { // Hot 18°C - 24°C
       suggestions.addAll([
         'Light, breathable fabrics are ideal',
         'T-shirt and jeans combination works well',
         'Comfortable sneakers recommended'
       ]);
-    } else {
+    } else { // Very hot > 25°C
       suggestions.addAll([
         'Light, loose-fitting clothes are best',
         'Shorts and t-shirts for comfort',

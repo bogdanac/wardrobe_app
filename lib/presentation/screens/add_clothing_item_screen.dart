@@ -4,11 +4,10 @@ import 'package:uuid/uuid.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import 'package:http/http.dart' as http;
 import '../../domain/entities/clothing_item.dart';
+import '../../domain/entities/custom_color.dart';
 import '../../core/themes/app_theme.dart';
 import '../../core/services/image_service.dart';
-import '../../core/services/color_palette_service.dart';
 import '../../core/errors/error_handler.dart';
 import '../../core/utils/loading_state.dart';
 import '../providers/clothing_provider.dart';
@@ -56,6 +55,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   LoadingState _loadingState = LoadingState.hidden;
   final ErrorHandler _errorHandler = ErrorHandler();
   List<Map<String, String>> _paletteColors = [];
+  int _currentImageIndex = 0; // Track which image is currently being displayed
 
 
   @override
@@ -80,10 +80,38 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
 
   Future<void> _loadPaletteColors() async {
     final customColorRepository = ref.read(customColorRepositoryProvider);
-    final colorService = ColorPaletteService(customColorRepository);
-    final colors = await colorService.getColors();
+    final customColors = await customColorRepository.getAllColors();
+
+    // Group colors by section and reorder: neutrals, pastels, accents
+    final neutrals = customColors.where((c) => c.section == ColorSection.neutrals).toList();
+    final pastels = customColors.where((c) => c.section == ColorSection.pastels).toList();
+    final accents = customColors.where((c) => c.section == ColorSection.accents).toList();
+
+    // Sort each group by order
+    neutrals.sort((a, b) => a.order.compareTo(b.order));
+    pastels.sort((a, b) => a.order.compareTo(b.order));
+    accents.sort((a, b) => a.order.compareTo(b.order));
+
+    // Combine in desired order with section markers
+    final reorderedColors = <Map<String, String>>[];
+
+    if (neutrals.isNotEmpty) {
+      reorderedColors.add({'name': 'SECTION_NEUTRALS', 'hex': '', 'section': 'neutrals'});
+      reorderedColors.addAll(neutrals.map((c) => {'name': c.name, 'hex': c.hex, 'section': 'neutrals'}));
+    }
+
+    if (pastels.isNotEmpty) {
+      reorderedColors.add({'name': 'SECTION_PASTELS', 'hex': '', 'section': 'pastels'});
+      reorderedColors.addAll(pastels.map((c) => {'name': c.name, 'hex': c.hex, 'section': 'pastels'}));
+    }
+
+    if (accents.isNotEmpty) {
+      reorderedColors.add({'name': 'SECTION_ACCENTS', 'hex': '', 'section': 'accents'});
+      reorderedColors.addAll(accents.map((c) => {'name': c.name, 'hex': c.hex, 'section': 'accents'}));
+    }
+
     setState(() {
-      _paletteColors = colors;
+      _paletteColors = reorderedColors;
     });
   }
 
@@ -161,6 +189,16 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
+                  value: 'add_images',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_photo_alternate, color: AppTheme.info),
+                      SizedBox(width: 12),
+                      Text('Add More Images'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'replace_image',
                   child: Row(
                     children: [
@@ -171,58 +209,48 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   ),
                 ),
                 const PopupMenuItem(
-                  value: 'remove_bg',
+                  value: 'archive',
                   child: Row(
                     children: [
-                      Icon(Icons.auto_fix_high, color: AppTheme.info),
+                      Icon(Icons.archive_outlined, color: Colors.orange),
                       SizedBox(width: 12),
-                      Text('Remove Background'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'crop_transparent',
-                  child: Row(
-                    children: [
-                      Icon(Icons.crop, color: AppTheme.pastelPink),
-                      SizedBox(width: 12),
-                      Text('Crop Transparent Space'),
-                    ],
-                  ),
-                ),
-                if (_beforeCropImage != null)
-                  const PopupMenuItem(
-                    value: 'undo_crop',
-                    child: Row(
-                      children: [
-                        Icon(Icons.undo, color: Colors.orange),
-                        SizedBox(width: 12),
-                        Text('Undo Crop'),
-                      ],
-                    ),
-                  ),
-                const PopupMenuItem(
-                  value: 'add_images',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_photo_alternate, color: AppTheme.info),
-                      SizedBox(width: 12),
-                      Text('Add More Images'),
+                      Text('Archive Item'),
                     ],
                   ),
                 ),
                 if (widget.item != null && !widget.item!.isArchived) ...[
                   const PopupMenuDivider(),
                   const PopupMenuItem(
-                    value: 'archive',
+                    value: 'remove_bg',
                     child: Row(
                       children: [
-                        Icon(Icons.archive_outlined, color: Colors.orange),
+                        Icon(Icons.auto_fix_high, color: AppTheme.info),
                         SizedBox(width: 12),
-                        Text('Archive Item'),
+                        Text('Remove Background'),
                       ],
                     ),
                   ),
+                  const PopupMenuItem(
+                    value: 'crop_transparent',
+                    child: Row(
+                      children: [
+                        Icon(Icons.crop, color: AppTheme.pastelPink),
+                        SizedBox(width: 12),
+                        Text('Crop Transparent Space'),
+                      ],
+                    ),
+                  ),
+                  if (_beforeCropImage != null)
+                    const PopupMenuItem(
+                      value: 'undo_crop',
+                      child: Row(
+                        children: [
+                          Icon(Icons.undo, color: Colors.orange),
+                          SizedBox(width: 12),
+                          Text('Undo Crop'),
+                        ],
+                      ),
+                    ),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Row(
@@ -347,11 +375,13 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       children: [
         if (_isMultiMode) _buildMultiImageSection() else _buildSingleImageSection(),
         if (_loadingState.isVisible)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: AppLoadingWidget(
-              state: _loadingState,
-              size: 80,
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: AppLoadingWidget(
+                state: _loadingState,
+                size: 80,
+              ),
             ),
           ),
       ],
@@ -359,64 +389,164 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   }
 
   Widget _buildSingleImageSection() {
+    // Get all available images (from widget.item, additional saved images, and newly picked images)
+    final allImagePaths = <String>[];
+    final allImageFiles = <File>[];
+
+    // Add existing saved images
+    if (widget.item?.imagePath != null) {
+      allImagePaths.add(widget.item!.imagePath!);
+    }
+    if (widget.item?.additionalImages != null) {
+      allImagePaths.addAll(widget.item!.additionalImages);
+    }
+
+    // Add newly picked additional images (not yet saved)
+    allImageFiles.addAll(_additionalImages);
+
+    final totalImages = allImagePaths.length + allImageFiles.length;
+    final hasMultipleImages = totalImages > 1;
 
     return Column(
       children: [
-        GestureDetector(
-          onTap: _showImagePickerOptions,
-          child: Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              color: AppTheme.lightGray,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.mediumGray.withValues(alpha: 0.3),
-                style: BorderStyle.solid,
-                width: 2,
-              ),
-            ),
-            child: _selectedImages.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.file(
-                        _selectedImages.first,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  )
-                : widget.item?.imagePath != null
+        Stack(
+          children: [
+            GestureDetector(
+              onTap: _showImagePickerOptions,
+              child: Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: AppTheme.lightGray,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.mediumGray.withValues(alpha: 0.3),
+                    style: BorderStyle.solid,
+                    width: 2,
+                  ),
+                ),
+                child: _selectedImages.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: AdaptiveClothingImage(
-                            imagePath: widget.item!.imagePath,
-                            type: widget.item!.type,
+                          child: Image.file(
+                            _selectedImages.first,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.camera_alt_outlined,
-                            size: 48,
-                            color: AppTheme.mediumGray,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Tap to add photo',
-                            style: TextStyle(
-                              color: AppTheme.mediumGray,
-                              fontSize: 16,
+                    : (allImagePaths.isNotEmpty || allImageFiles.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: _buildCurrentImage(allImagePaths, allImageFiles),
                             ),
+                          )
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.camera_alt_outlined,
+                                size: 48,
+                                color: AppTheme.mediumGray,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Tap to add photo',
+                                style: TextStyle(
+                                  color: AppTheme.mediumGray,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+              ),
+            ),
+            // Navigation arrows for multiple images
+            if (hasMultipleImages && _selectedImages.isEmpty) ...[
+              // Left arrow
+              if (_currentImageIndex > 0)
+                Positioned(
+                  left: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentImageIndex = (_currentImageIndex - 1).clamp(0, totalImages - 1);
+                        });
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chevron_left,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
-          ),
+                    ),
+                  ),
+                ),
+              // Right arrow
+              if (_currentImageIndex < totalImages - 1)
+                Positioned(
+                  right: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentImageIndex = (_currentImageIndex + 1).clamp(0, totalImages - 1);
+                        });
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Image counter indicator
+              Positioned(
+                bottom: 12,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${_currentImageIndex + 1} / $totalImages',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -590,12 +720,16 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      i == 0 ? 'Primary' : i == 1 ? 'Secondary' : 'Accent',
+                      _selectedColors[i] != null
+                        ? _getColorName(_selectedColors[i]!)
+                        : (i == 0 ? 'Primary' : i == 1 ? 'Secondary' : 'Accent'),
                       style: TextStyle(
                         fontSize: 10,
                         color: AppTheme.mediumGray,
                         fontWeight: i == 0 ? FontWeight.w500 : FontWeight.normal,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (_selectedColors[i] != null && i > 0)
                       GestureDetector(
@@ -835,7 +969,13 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       } else if (_selectedImages.isNotEmpty) {
         imageToProcess = _selectedImages.first;
       } else if (widget.item?.imagePath != null) {
-        imageToProcess = File(widget.item!.imagePath!);
+        // Check if it's a Firebase URL and download it first
+        final firebaseImageService = ref.read(firebaseImageServiceProvider);
+        if (firebaseImageService.isFirebaseUrl(widget.item!.imagePath!)) {
+          imageToProcess = await firebaseImageService.downloadImageToLocal(widget.item!.imagePath!);
+        } else {
+          imageToProcess = File(widget.item!.imagePath!);
+        }
       } else {
         throw Exception('No image available');
       }
@@ -922,19 +1062,11 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       } else if (widget.item?.imagePath != null) {
         final imagePath = widget.item!.imagePath!;
 
-        // Check if it's a network URL (Firebase)
-        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-          // Download the image from Firebase
-          final response = await http.get(Uri.parse(imagePath));
-          if (response.statusCode != 200) {
-            throw Exception('Failed to download image from Firebase');
-          }
-          imageBytes = response.bodyBytes;
-
-          // Save to temp file for undo
-          final tempDir = await Directory.systemTemp.createTemp('original_');
-          imageToProcess = File('${tempDir.path}/original_${DateTime.now().millisecondsSinceEpoch}.png');
-          await imageToProcess.writeAsBytes(imageBytes);
+        // Check if it's a Firebase URL and download it first
+        final firebaseImageService = ref.read(firebaseImageServiceProvider);
+        if (firebaseImageService.isFirebaseUrl(imagePath)) {
+          imageToProcess = await firebaseImageService.downloadImageToLocal(imagePath);
+          imageBytes = await imageToProcess.readAsBytes();
         } else {
           // Local file
           imageToProcess = File(imagePath);
@@ -982,8 +1114,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       }
 
       // Add small padding (5% of dimensions)
-      final paddingX = ((maxX - minX) * 0.05).round().clamp(5, 20);
-      final paddingY = ((maxY - minY) * 0.05).round().clamp(5, 20);
+      final paddingX = ((maxX - minX) * 0.05).round().clamp(10, 20);
+      final paddingY = ((maxY - minY) * 0.05).round().clamp(10, 20);
 
       minX = (minX - paddingX).clamp(0, decodedImage.width - 1);
       minY = (minY - paddingY).clamp(0, decodedImage.height - 1);
@@ -1008,6 +1140,12 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         _selectedImages = [croppedFile];
         if (_processedImages.isNotEmpty) {
           _processedImages[0]['file'] = croppedFile;
+        } else {
+          // If no processed images yet (e.g., editing existing item), add it
+          _processedImages.add({
+            'file': croppedFile,
+            'colors': <Color>[],
+          });
         }
         _isProcessing = false;
         _loadingState = const LoadingState(
@@ -1074,7 +1212,14 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       final images = await _imageService.pickMultipleImagesFromGallery();
       if (images.isNotEmpty) {
         setState(() {
+          // Calculate the index where the first new image will be
+          final existingImageCount = (widget.item?.imagePath != null ? 1 : 0) +
+                                     (widget.item?.additionalImages.length ?? 0);
+
           _additionalImages.addAll(images);
+
+          // Auto-scroll to the first newly added image
+          _currentImageIndex = existingImageCount;
         });
       }
     } catch (e) {
@@ -1095,14 +1240,16 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
       if (_isMultiMode) {
         // Save multiple items
         final itemsToSave = <ClothingItem>[];
-        
+        final firebaseImageService = ref.read(firebaseImageServiceProvider);
+
         for (int i = 0; i < _processedImages.length; i++) {
           final processedData = _processedImages[i];
           final processedFile = processedData['file'] as File;
           // Colors are handled via _selectedColors now
-          
-          final imagePath = await _imageService.saveImage(processedFile);
-          
+
+          // Upload to Firebase Storage
+          final imagePath = await firebaseImageService.uploadImage(processedFile);
+
           final item = ClothingItem(
             id: _uuid.v4(),
             name: _generateItemName(_selectedType, i + 1),
@@ -1123,7 +1270,7 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
             sizeFit: SizeFit.perfect,
             isArchived: false,
           );
-          
+
           itemsToSave.add(item);
         }
 
@@ -1143,7 +1290,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         }
       } else {
         // Save single item (existing logic)
+        final firebaseImageService = ref.read(firebaseImageServiceProvider);
         String? imagePath;
+
         if (_processedImages.isNotEmpty) {
           final processedFile = _processedImages.first['file'] as File;
 
@@ -1152,7 +1301,6 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               (widget.item!.imagePath!.startsWith('http://') ||
                widget.item!.imagePath!.startsWith('https://'))) {
             // Upload new cropped image to Firebase and delete old one
-            final firebaseImageService = ref.read(firebaseImageServiceProvider);
             final oldImageUrl = widget.item!.imagePath!;
 
             // Upload the new cropped image
@@ -1165,17 +1313,17 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
               // Ignore deletion errors - the new image is already uploaded
             }
           } else {
-            // Local storage
-            imagePath = await _imageService.saveImage(processedFile);
+            // New item or replacing local image - upload to Firebase
+            imagePath = await firebaseImageService.uploadImage(processedFile);
           }
         } else if (widget.item?.imagePath != null) {
           imagePath = widget.item!.imagePath;
         }
 
-        // Save additional images
+        // Save additional images to Firebase
         final additionalImagePaths = <String>[];
         for (final additionalImage in _additionalImages) {
-          final additionalPath = await _imageService.saveImage(additionalImage);
+          final additionalPath = await firebaseImageService.uploadImage(additionalImage);
           additionalImagePaths.add(additionalPath);
         }
 
@@ -1243,6 +1391,117 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
 
   String _colorToHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+
+  String _getColorName(Color color) {
+    // Find the color name from the palette using color distance matching
+    // This is more robust than exact hex matching
+
+    if (_paletteColors.isEmpty) {
+      return 'Loading...';
+    }
+
+    // First try exact hex match
+    final hexValue = _colorToHex(color);
+    final exactMatch = _paletteColors.firstWhere(
+      (c) => c['hex'] == hexValue,
+      orElse: () => <String, String>{},
+    );
+
+    if (exactMatch.isNotEmpty) {
+      return exactMatch['name']!;
+    }
+
+    // If no exact match, find closest color by distance
+    double minDistance = double.infinity;
+    Map<String, String>? closestColor;
+
+    for (final paletteColor in _paletteColors) {
+      try {
+        final paletteHex = paletteColor['hex']!;
+        final paletteColorObj = _hexToColor(paletteHex);
+
+        // Calculate color distance (Euclidean distance in RGB space)
+        final distance = _calculateColorDistance(color, paletteColorObj);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestColor = paletteColor;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    // If closest color is very close (within threshold), use it
+    // Otherwise return a descriptive color name based on RGB values
+    if (closestColor != null && minDistance < 30.0) {
+      return closestColor['name']!;
+    }
+
+    return _getDescriptiveColorName(color);
+  }
+
+  double _calculateColorDistance(Color c1, Color c2) {
+    final r1 = (c1.r * 255.0).round();
+    final g1 = (c1.g * 255.0).round();
+    final b1 = (c1.b * 255.0).round();
+    final r2 = (c2.r * 255.0).round();
+    final g2 = (c2.g * 255.0).round();
+    final b2 = (c2.b * 255.0).round();
+
+    final rDiff = r1 - r2;
+    final gDiff = g1 - g2;
+    final bDiff = b1 - b2;
+    return (rDiff * rDiff + gDiff * gDiff + bDiff * bDiff).toDouble();
+  }
+
+  String _getDescriptiveColorName(Color color) {
+    // Generate a descriptive name for colors not in the palette
+    final r = (color.r * 255.0).round();
+    final g = (color.g * 255.0).round();
+    final b = (color.b * 255.0).round();
+
+    // Check for grayscale
+    if ((r - g).abs() < 20 && (g - b).abs() < 20 && (r - b).abs() < 20) {
+      if (r < 50) return 'Black';
+      if (r > 200) return 'White';
+      return 'Gray';
+    }
+
+    // Determine dominant color
+    if (r > g && r > b) {
+      if (g > 100 && b < 100) return 'Orange';
+      if (g < 100 && b > 100) return 'Magenta';
+      return 'Red';
+    } else if (g > r && g > b) {
+      if (b > 100) return 'Cyan';
+      if (r > 100) return 'Yellow';
+      return 'Green';
+    } else if (b > r && b > g) {
+      if (r > 100) return 'Purple';
+      return 'Blue';
+    }
+
+    return 'Mixed';
+  }
+
+  Widget _buildCurrentImage(List<String> imagePaths, List<File> imageFiles) {
+    // Determine if current index is a path or file
+    if (_currentImageIndex < imagePaths.length) {
+      // Show saved image from path
+      return AdaptiveClothingImage(
+        imagePath: imagePaths[_currentImageIndex],
+        type: widget.item!.type,
+      );
+    } else {
+      // Show newly picked file
+      final fileIndex = _currentImageIndex - imagePaths.length;
+      return Image.file(
+        imageFiles[fileIndex],
+        fit: BoxFit.contain,
+      );
+    }
   }
 
   String _getMetallicElementsLabel(MetallicElements elements) {
@@ -1366,59 +1625,85 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         content: SizedBox(
           width: 300,
           height: 500,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.75,
-            ),
-            itemCount: _paletteColors.length,
-            itemBuilder: (context, index) {
-              final colorData = _paletteColors[index];
-              final color = _hexToColor(colorData['hex']!);
-              final isSelected = _selectedColors[colorIndex] == color;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedColors[colorIndex] = color;
-                  });
-                  Navigator.pop(dialogContext);
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? AppTheme.pastelPink : Colors.grey.shade300,
-                          width: isSelected ? 3 : 1,
+          child: ListView(
+            children: _paletteColors.map((colorData) {
+              // Check if this is a section header
+              if (colorData['name']!.startsWith('SECTION_')) {
+                final sectionName = colorData['name']!.replaceFirst('SECTION_', '');
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (sectionName != 'NEUTRALS') // Don't show divider before first section
+                        const Divider(
+                          color: AppTheme.mediumGray,
+                          thickness: 1,
+                          height: 20,
+                        ),
+                      Text(
+                        sectionName.substring(0, 1).toUpperCase() + sectionName.substring(1).toLowerCase(),
+                        style: const TextStyle(
+                          color: AppTheme.pastelPink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      child: isSelected
-                          ? Icon(
-                              Icons.check,
-                              color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
-                              size: 20,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      colorData['name']!,
-                      style: const TextStyle(fontSize: 10, color: AppTheme.primaryWhite),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
+                );
+              }
+
+              // Regular color item
+              final color = _hexToColor(colorData['hex']!);
+              final isSelected = _selectedColors[colorIndex] == color;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedColors[colorIndex] = color;
+                    });
+                    Navigator.pop(dialogContext);
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? AppTheme.pastelPink : Colors.grey.shade300,
+                            width: isSelected ? 3 : 1,
+                          ),
+                        ),
+                        child: isSelected
+                            ? Icon(
+                                Icons.check,
+                                color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                                size: 20,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          colorData['name']!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.primaryWhite,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
-            },
+            }).toList(),
           ),
         ),
         actions: [

@@ -27,13 +27,16 @@ class ClothingItemCard extends StatelessWidget {
               ? const BorderSide(color: AppTheme.pastelPink, width: 2)
               : BorderSide.none,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: AdaptiveClothingImage(
-            imagePath: item.imagePath,
-            type: item.type,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            placeholder: _buildPlaceholder(),
+            child: AdaptiveClothingImage(
+              imagePath: item.imagePath,
+              type: item.type,
+              borderRadius: BorderRadius.circular(12),
+              placeholder: _buildPlaceholder(),
+            ),
           ),
         ),
       ),

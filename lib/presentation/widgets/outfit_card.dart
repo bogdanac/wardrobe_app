@@ -40,7 +40,7 @@ class OutfitCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 1,
+              aspectRatio: 0.75, // Taller/rectangular preview (3:4 ratio)
               child: Stack(
                 children: [
                   Container(
@@ -217,59 +217,240 @@ class OutfitCard extends ConsumerWidget {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
-      ),
-      itemCount: outfit.clothingItemIds.length > 4 ? 4 : outfit.clothingItemIds.length,
-      itemBuilder: (context, index) {
-        final itemId = outfit.clothingItemIds[index];
-        final itemAsync = ref.watch(clothingItemByIdProvider(itemId));
-        
-        return itemAsync.when(
-          data: (item) {
-            if (item?.imagePath != null) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: _buildClothingItemImage(item!.imagePath!),
-              );
-            }
-            return Container(
-              decoration: BoxDecoration(
-                color: AppTheme.lightGray,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Icon(
-                Icons.checkroom,
-                color: AppTheme.mediumGray,
-                size: 20,
-              ),
-            );
-          },
-          loading: () => Container(
-            color: AppTheme.lightGray,
-            child: const Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+    // Fetch all items and organize by type
+    return FutureBuilder(
+      future: _organizeItemsByType(ref),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              color: AppTheme.pastelPink,
             ),
-          ),
-          error: (error, stack) => Container(
-            color: AppTheme.lightGray,
-            child: const Icon(
-              Icons.error,
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(
+            child: Icon(
+              Icons.error_outline,
+              size: 48,
               color: AppTheme.mediumGray,
-              size: 16,
             ),
-          ),
-        );
+          );
+        }
+
+        final organized = snapshot.data as Map<String, List<String>>;
+        return _buildSmartLayout(organized, ref);
       },
+    );
+  }
+
+  Future<Map<String, List<String>>> _organizeItemsByType(WidgetRef ref) async {
+    final Map<String, List<String>> organized = {
+      'outerwear': [],
+      'top': [],
+      'bottom': [],
+      'dress': [],
+      'shoes': [],
+      'bag': [],
+      'accessory': [],
+      'swimwear': [],
+      'activewear': [],
+    };
+
+    for (final itemId in outfit.clothingItemIds) {
+      try {
+        final item = await ref.read(clothingItemByIdProvider(itemId).future);
+        if (item != null) {
+          organized[item.type.name]?.add(item.imagePath ?? '');
+        }
+      } catch (e) {
+        // Skip items that fail to load
+      }
+    }
+
+    return organized;
+  }
+
+  Widget _buildSmartLayout(Map<String, List<String>> organized, WidgetRef ref) {
+    // If outfit has activewear, use simple grid (can't distinguish top/bottom)
+    if (organized['activewear']!.isNotEmpty) {
+      return _buildSimpleGrid(organized, ref);
+    }
+
+    // Determine main item (dress, swimwear as full-body, or top)
+    String mainItem = '';
+    bool isFullBodyItem = false;
+
+    if (organized['dress']!.isNotEmpty) {
+      mainItem = organized['dress']!.first;
+      isFullBodyItem = true;
+    } else if (organized['swimwear']!.isNotEmpty) {
+      mainItem = organized['swimwear']!.first;
+      isFullBodyItem = true;
+    } else if (organized['top']!.isNotEmpty) {
+      mainItem = organized['top']!.first;
+      isFullBodyItem = false;
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left side: Outerwear or first accessory
+              if (organized['outerwear']!.isNotEmpty || organized['accessory']!.isNotEmpty)
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: _buildItemBox(
+                          organized['outerwear']!.isNotEmpty
+                              ? organized['outerwear']!.first
+                              : organized['accessory']!.first,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (organized['outerwear']!.isNotEmpty || organized['accessory']!.isNotEmpty)
+                const SizedBox(width: 2),
+              // Center column: Top and Bottom
+              Expanded(
+                flex: 5,
+                child: Column(
+                  children: [
+                    // Top / Dress / Swimwear / Activewear
+                    Expanded(
+                      flex: 2,
+                      child: _buildItemBox(mainItem),
+                    ),
+                    const SizedBox(height: 2),
+                    // Bottom (slightly offset to the right) - only show if not a full-body item
+                    if (!isFullBodyItem && organized['bottom']!.isNotEmpty)
+                      Expanded(
+                        flex: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: _buildItemBox(organized['bottom']!.first),
+                        ),
+                      ),
+                    // Shoes (if no bottom or is full-body item, show shoes here)
+                    if ((organized['bottom']!.isEmpty || isFullBodyItem) && organized['shoes']!.isNotEmpty)
+                      Expanded(
+                        child: _buildItemBox(organized['shoes']!.first),
+                      ),
+                  ],
+                ),
+              ),
+              // Right side: Bag, second accessory, or shoes
+              if (organized['bag']!.isNotEmpty || organized['accessory']!.length > 1 ||
+                  (organized['shoes']!.isNotEmpty && !isFullBodyItem && organized['bottom']!.isNotEmpty)) ...[
+                const SizedBox(width: 2),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: [
+                      // Bag or accessory on top
+                      if (organized['bag']!.isNotEmpty || organized['accessory']!.length > 1)
+                        Expanded(
+                          child: _buildItemBox(
+                            organized['bag']!.isNotEmpty
+                                ? organized['bag']!.first
+                                : organized['accessory']![1],
+                          ),
+                        ),
+                      if ((organized['bag']!.isNotEmpty || organized['accessory']!.length > 1) &&
+                          organized['shoes']!.isNotEmpty &&
+                          !isFullBodyItem &&
+                          organized['bottom']!.isNotEmpty)
+                        const SizedBox(height: 2),
+                      // Shoes on bottom right (if bottom exists and not full-body)
+                      if (organized['shoes']!.isNotEmpty && !isFullBodyItem && organized['bottom']!.isNotEmpty)
+                        Expanded(
+                          child: _buildItemBox(organized['shoes']!.first),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleGrid(Map<String, List<String>> organized, WidgetRef ref) {
+    // Collect all items for grid
+    final List<String> allItems = [
+      ...organized['activewear']!,
+      ...organized['outerwear']!,
+      ...organized['accessory']!,
+      ...organized['bag']!,
+      ...organized['shoes']!,
+    ];
+
+    final displayCount = allItems.length > 4 ? 4 : allItems.length;
+
+    return Container(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: displayCount == 1 ? 1 : 2,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+              childAspectRatio: 1,
+            ),
+            itemCount: displayCount,
+            itemBuilder: (context, index) {
+              return _buildItemBox(allItems[index]);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemBox(String imagePath) {
+    if (imagePath.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          Icons.checkroom,
+          color: AppTheme.mediumGray,
+          size: 24,
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: _buildClothingItemImage(imagePath),
+        ),
+      ),
     );
   }
 

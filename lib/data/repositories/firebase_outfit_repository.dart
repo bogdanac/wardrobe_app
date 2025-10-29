@@ -140,7 +140,7 @@ class FirebaseOutfitRepository implements OutfitRepository {
   Future<List<Outfit>> filterOutfits({
     List<String>? categories,
     List<String>? outfitStyles,
-    Season? season,
+    List<Season>? seasons,
     List<WeatherRange>? weatherRanges,
     bool? isFavorite,
   }) async {
@@ -156,12 +156,15 @@ class FirebaseOutfitRepository implements OutfitRepository {
     final snapshot = await query.get();
     var outfits = snapshot.docs.map(_fromFirestore).toList();
 
-    // Client-side season filtering (include allSeason items)
-    if (season != null) {
+    // Client-side season filtering
+    // If "All Season" is selected in filter, show all outfits regardless of their season tags
+    // Otherwise, show outfits that match any selected season OR have "All Season" tag
+    if (seasons != null && seasons.isNotEmpty && !seasons.contains(Season.allSeason)) {
       outfits = outfits.where((outfit) =>
-        outfit.seasons.contains(season) || outfit.seasons.contains(Season.allSeason)
+        outfit.seasons.any((s) => seasons.contains(s)) || outfit.seasons.contains(Season.allSeason)
       ).toList();
     }
+    // If seasons contains Season.allSeason, don't filter - show all outfits
 
     // Client-side filtering for complex queries
     if (categories != null && categories.isNotEmpty) {
@@ -187,9 +190,30 @@ class FirebaseOutfitRepository implements OutfitRepository {
     await _collection.doc(outfit.id).set(_toFirestore(outfit));
   }
 
+  // Save outfit and increment parent variant count in a batch (more efficient for variants)
+  @override
+  Future<void> saveOutfitVariant(Outfit variant, String parentOutfitId) async {
+    final batch = _firestore.batch();
+
+    // Add the variant
+    batch.set(_collection.doc(variant.id), _toFirestore(variant));
+
+    // Increment parent's variant count
+    final parentSnapshot = await _collection.where('id', isEqualTo: parentOutfitId).limit(1).get();
+    if (parentSnapshot.docs.isNotEmpty) {
+      batch.update(parentSnapshot.docs.first.reference, {
+        'variantCount': FieldValue.increment(1),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
+
+    await batch.commit();
+  }
+
   @override
   Future<void> updateOutfit(Outfit outfit) async {
-    await _collection.doc(outfit.id).update(_toFirestore(outfit));
+    // Use set with merge to update existing document or create if it doesn't exist
+    await _collection.doc(outfit.id).set(_toFirestore(outfit), SetOptions(merge: true));
   }
 
   @override
@@ -282,9 +306,12 @@ class FirebaseOutfitRepository implements OutfitRepository {
   Future<List<Outfit>> getOutfitVariants(String parentOutfitId) async {
     final snapshot = await _collection
         .where('parentOutfitId', isEqualTo: parentOutfitId)
-        .orderBy('createdAt', descending: false)
         .get();
-    return snapshot.docs.map(_fromFirestore).toList();
+
+    // Sort in Dart instead of Firestore to avoid needing composite index
+    final variants = snapshot.docs.map(_fromFirestore).toList();
+    variants.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return variants;
   }
 
   // Update variant count for a base outfit
@@ -294,6 +321,18 @@ class FirebaseOutfitRepository implements OutfitRepository {
     if (snapshot.docs.isNotEmpty) {
       await snapshot.docs.first.reference.update({
         'variantCount': count,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+
+  // Increment variant count for a base outfit (more efficient)
+  @override
+  Future<void> incrementVariantCount(String outfitId) async {
+    final snapshot = await _collection.where('id', isEqualTo: outfitId).limit(1).get();
+    if (snapshot.docs.isNotEmpty) {
+      await snapshot.docs.first.reference.update({
+        'variantCount': FieldValue.increment(1),
         'updatedAt': DateTime.now().toIso8601String(),
       });
     }

@@ -144,6 +144,8 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     FilterChip(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      labelPadding: EdgeInsets.zero,
                       label: Text(category.name),
                       selected: isSelected,
                       selectedColor: category.color,
@@ -220,6 +222,8 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
           children: Season.values.map((season) {
             final isSelected = widget.selectedSeasons.contains(season);
             return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Text(_getSeasonLabel(season)),
               selected: isSelected,
               selectedColor: _getSeasonColor(season),
@@ -231,7 +235,15 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
               onSelected: (selected) {
                 final newSeasons = List<Season>.from(widget.selectedSeasons);
                 if (selected) {
-                  newSeasons.add(season);
+                  // If selecting "All Season", clear all other seasons
+                  if (season == Season.allSeason) {
+                    newSeasons.clear();
+                    newSeasons.add(Season.allSeason);
+                  } else {
+                    // If selecting a specific season, remove "All Season" if it exists
+                    newSeasons.remove(Season.allSeason);
+                    newSeasons.add(season);
+                  }
                 } else {
                   newSeasons.remove(season);
                 }
@@ -262,6 +274,8 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
           children: WeatherRange.values.map((range) {
             final isSelected = widget.selectedWeatherRanges.contains(range);
             return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Text(_getWeatherRangeLabel(range)),
               selected: isSelected,
               selectedColor: _getWeatherColor(range),
@@ -315,6 +329,8 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
           children: _wardrobeColors.map((color) {
             final isSelected = widget.selectedColors.contains(color);
             return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Container(
                 width: 16,
                 height: 16,
@@ -359,6 +375,8 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
           children: ClothingType.values.map((type) {
             final isSelected = widget.selectedTypes.contains(type);
             return FilterChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Text(_getClothingTypeLabel(type)),
               selected: isSelected,
               side: BorderSide.none,
@@ -498,12 +516,12 @@ class _MaximalistClothingItemFiltersState extends ConsumerState<MaximalistClothi
 
   String _getWeatherRangeLabel(WeatherRange range) {
     switch (range) {
-      case WeatherRange.veryHot: return '28°C';
-      case WeatherRange.hot: return '22°C';
-      case WeatherRange.warm: return '14°C';
-      case WeatherRange.cool: return '4°C';
-      case WeatherRange.cold: return '-4°C';
-      case WeatherRange.veryCold: return '-15°C';
+      case WeatherRange.veryHot: return 'Hot > 25°C';
+      case WeatherRange.hot: return 'Warm 18-24°C';
+      case WeatherRange.warm: return 'Chill 10-17°C';
+      case WeatherRange.cool: return 'Cool 3-9°C';
+      case WeatherRange.cold: return 'Cold -5-2°C';
+      case WeatherRange.veryCold: return 'Freezing < -5°C';
     }
   }
 
