@@ -43,8 +43,13 @@ jobs:
     - name: Run code generation
       run: dart run build_runner build --delete-conflicting-outputs
 
+    - name: Create asset directories
+      run: |
+        mkdir -p assets/images
+        mkdir -p assets/icons
+
     - name: Build Release APK
-      run: flutter build apk --release
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Build Debug APK
       run: flutter build apk --debug
