@@ -45,6 +45,11 @@ jobs:
         run: |
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
+      - name: Create asset directories
+        run: |
+          mkdir -p assets/images
+          mkdir -p assets/icons
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -116,6 +121,11 @@ jobs:
           storeFile=keystore.jks
           EOF
           fi
+
+      - name: Create asset directories
+        run: |
+          mkdir -p assets/images
+          mkdir -p assets/icons
 
       - name: Get dependencies
         run: flutter pub get

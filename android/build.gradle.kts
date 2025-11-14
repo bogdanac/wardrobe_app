@@ -9,7 +9,7 @@ subprojects {
     afterEvaluate {
         if (hasProperty("android")) {
             configure<com.android.build.gradle.BaseExtension> {
-                compileSdkVersion(34)
+                compileSdkVersion(35)
 
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_11
