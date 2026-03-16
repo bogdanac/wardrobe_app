@@ -173,6 +173,9 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                   case 'undo_crop':
                     _undoCrop();
                     break;
+                  case 'restore_original':
+                    _restoreOriginalPhoto();
+                    break;
                   case 'replace_image':
                     _showImagePickerOptions();
                     break;
@@ -248,6 +251,17 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
                           Icon(Icons.undo, color: Colors.orange),
                           SizedBox(width: 12),
                           Text('Undo Crop'),
+                        ],
+                      ),
+                    ),
+                  if (_originalImage != null)
+                    const PopupMenuItem(
+                      value: 'restore_original',
+                      child: Row(
+                        children: [
+                          Icon(Icons.restore, color: AppTheme.gold),
+                          SizedBox(width: 12),
+                          Text('Restore Original Photo'),
                         ],
                       ),
                     ),
@@ -658,6 +672,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
           children: MetallicElements.values.map((element) {
             final isSelected = _selectedMetallicElements == element;
             return ChoiceChip(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              labelPadding: EdgeInsets.zero,
               label: Text(_getMetallicElementsLabel(element)),
               selected: isSelected,
               selectedColor: _getMetallicElementsColor(element),
@@ -895,29 +911,20 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
 
     for (final image in _selectedImages) {
       try {
-        final processedImage = await _imageService.removeBackground(image);
-        final colors = await _imageService.extractColors(processedImage, customColorRepository: customColorRepository, maxColors: 1);
+        // Don't remove background automatically - just extract colors from original image
+        final colors = await _imageService.extractColors(image, customColorRepository: customColorRepository, maxColors: 1);
 
         _processedImages.add({
-          'file': processedImage,
+          'file': image,
           'colors': colors,
         });
         allColors.addAll(colors);
       } catch (e) {
-        try {
-          final colors = await _imageService.extractColors(image, customColorRepository: customColorRepository, maxColors: 1);
-          _processedImages.add({
-            'file': image,
-            'colors': colors,
-          });
-          allColors.addAll(colors);
-        } catch (colorError) {
-          _handleError(colorError, 'extracting colors');
-          _processedImages.add({
-            'file': image,
-            'colors': <Color>[],
-          });
-        }
+        _handleError(e, 'extracting colors');
+        _processedImages.add({
+          'file': image,
+          'colors': <Color>[],
+        });
       }
     }
 
@@ -1205,6 +1212,81 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  Future<void> _restoreOriginalPhoto() async {
+    if (_originalImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No original photo to restore')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _loadingState = const LoadingState(
+        type: LoadingType.processing,
+        message: 'Restoring original photo...',
+      );
+    });
+
+    try {
+      // Restore the original image
+      _selectedImages = [_originalImage!];
+
+      // Re-extract colors from the original image
+      final customColorRepository = ref.read(customColorRepositoryProvider);
+      final colors = await _imageService.extractColors(_originalImage!, customColorRepository: customColorRepository, maxColors: 3);
+
+      setState(() {
+        _processedImages = [{
+          'file': _originalImage!,
+          'colors': colors,
+        }];
+
+        // Update detected colors
+        _detectedColors = colors.take(1).toList();
+        if (colors.isNotEmpty) {
+          _selectedColors[0] = colors.first;
+        }
+
+        // Clear any crop history
+        _beforeCropImage = null;
+
+        _isProcessing = false;
+        _loadingState = const LoadingState(
+          type: LoadingType.processing,
+          message: 'Original photo restored!',
+        );
+      });
+
+      // Hide success message after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _loadingState = LoadingState(
+          type: LoadingType.processing,
+          message: 'Failed to restore original: ${e.toString()}',
+        );
+      });
+
+      // Hide error message after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _loadingState = LoadingState.hidden;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _pickAdditionalImages() async {
@@ -1598,6 +1680,8 @@ class _AddClothingItemScreenState extends ConsumerState<AddClothingItemScreen> {
   Widget _buildTypeChip(ClothingType type) {
     final isSelected = _selectedType == type;
     return ChoiceChip(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      labelPadding: EdgeInsets.zero,
       label: Text(_getTypeLabel(type)),
       selected: isSelected,
       onSelected: (selected) {
